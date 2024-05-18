@@ -1,27 +1,17 @@
 #! /usr/bin/env python3
-'''
-# p2p_S1_TOPS_Frame is part of GMTSAR. 
-# Process Sentinel-1A TOPS data; automatically process a single frame of interferogram. 
-'''
+"""
+p2p_S1_TOPS_Frame is part of GMTSAR. 
+Process Sentinel-1A TOPS data; automatically process a single frame of interferogram. 
+"""
 
-import sys, os, glob
-import subprocess, multiprocessing
-from gmtsar_lib import * 
+import sys
+import os
+import glob
+import subprocess
+import multiprocessing
+from gmtsar_lib import *
 
-def Error_Message():
-    print(' ')
-    print('Usage: p2p_S1_TOPS_Frame.csh Master.SAFE Master.EOF Aligned.SAFE Aligned.EOF config.s1a.txt polarization parallel')  
-    print(' ')
-    print('Example: Example: p2p_S1_TOPS_Frame.csh S1A_IW_SLC__1SDV_20150607T014936_20150607T015003_006261_00832E_3626.SAFE S1A_OPER_AUX_POEORB_OPOD_20150615T155109_V20150525T225944_20150527T005944.EOF S1A_IW_SLC__1SSV_20150526T014935_20150526T015002_006086_007E23_679A.SAFE S1A_OPER_AUX_POEORB_OPOD_20150627T155155_V20150606T225944_20150608T005944.EOF config.s1a.txt vv 1')
-    print(' Place the .SAFE file in the raw folder, DEM in the topo folder.')
-    print(' During processing, F1, F2, F3 and merge folder will be generated.')
-    print(' Final results will be placed in the merge folder, with phase.')
-    print(' corr [unwrapped phase]')
-    print(' polarization = vv vh hh or hv')
-    print(' parallel = 0-sequential / 1-parallel')
-    print('Reference: Xu, X., Sandwell, D.T., Tymofyeyeva, E., González-Ortega, A. and Tong, X., ')
-    print('   2017. Tectonic and Anthropogenic Deformation at the Cerro Prieto Geothermal ')
-    print('   Step-Over Revealed by Sentinel-1A InSAR. IEEE Transactions on Geoscience and Remote Sensing.')
+
 
 def getFilenameWithPolXml(searchDir, searchStr1, pol, fileFormat):
     fileList = os.listdir(searchDir+'/annotation')
@@ -29,7 +19,8 @@ def getFilenameWithPolXml(searchDir, searchStr1, pol, fileFormat):
         if (searchStr1 in fileName) and (pol in fileName) and (fileFormat in fileName):
             selectedFile = fileName[:-4]
             print(selectedFile)
-    return selectedFile   
+    return selectedFile
+
 
 def linkFiles(subswathId, masterSafe, masterEof, alignedSafe, alignedEof, fmList, fsList):
     rootDir = 'F'+str(subswathId+1)
@@ -38,7 +29,6 @@ def linkFiles(subswathId, masterSafe, masterEof, alignedSafe, alignedEof, fmList
     run('mkdir -p '+rootDir+'/topo')
     os.chdir(rootDir)
     os.system('pwd')
-    replace_strings
     print('P2P_S1_TOPS_FRAME: Linking files for Subswath '+str(subswathId))
     os.chdir('topo')
     os.system('pwd')
@@ -46,14 +36,21 @@ def linkFiles(subswathId, masterSafe, masterEof, alignedSafe, alignedEof, fmList
     os.chdir('../raw')
     os.system('pwd')
     file_shuttle('../../topo/dem.grd', '.', 'link')
-    file_shuttle('../../raw/'+masterSafe+'/annotation/'+fmList[subswathId]+'.xml', '.', 'link')
-    file_shuttle('../../raw/'+masterSafe+'/measurement/'+fmList[subswathId]+'.tiff', '.', 'link')  
-    file_shuttle('../../raw/'+masterEof, './'+fmList[subswathId]+'.EOF', 'link')
-    file_shuttle('../../raw/'+alignedSafe+'/annotation/'+fsList[subswathId]+'.xml', '.', 'link')
-    file_shuttle('../../raw/'+alignedSafe+'/measurement/'+fsList[subswathId]+'.tiff', '.', 'link')  
-    file_shuttle('../../raw/'+alignedEof, './'+fsList[subswathId]+'.EOF', 'link')      
+    file_shuttle('../../raw/'+masterSafe+'/annotation/' +
+                 fmList[subswathId]+'.xml', '.', 'link')
+    file_shuttle('../../raw/'+masterSafe+'/measurement/' +
+                 fmList[subswathId]+'.tiff', '.', 'link')
+    file_shuttle('../../raw/'+masterEof, './' +
+                 fmList[subswathId]+'.EOF', 'link')
+    file_shuttle('../../raw/'+alignedSafe+'/annotation/' +
+                 fsList[subswathId]+'.xml', '.', 'link')
+    file_shuttle('../../raw/'+alignedSafe+'/measurement/' +
+                 fsList[subswathId]+'.tiff', '.', 'link')
+    file_shuttle('../../raw/'+alignedEof, './' +
+                 fsList[subswathId]+'.EOF', 'link')
     os.chdir('../..')
-    
+
+
 def processingF1F2F3(seq, fmList, fsList):
     if seq == 0:
         for subswathId in range(3):
@@ -62,13 +59,15 @@ def processingF1F2F3(seq, fmList, fsList):
             processOneSubswath(subswathId, fm, fs)
     elif seq == 1:
         os.environ['OMP_NUM_THREADS'] = '3'
-        subswathIdList = [0,1,2]
+        subswathIdList = [0, 1, 2]
         with multiprocessing.Pool(processes=3) as pool:
-            pool.starmap(processOneSubswath, zip(subswathIdList, fmList, fsList))
-            
+            pool.starmap(processOneSubswath, zip(
+                subswathIdList, fmList, fsList))
+
+
 def processOneSubswath(subswathId, fm, fs):
     folderName = 'F'+str(subswathId+1)
-    print('Processing subswath '+ folderName)
+    print('Processing subswath ' + folderName)
     file_shuttle('config.py', folderName+'/config.py', 'cp')
     os.chdir(folderName)
     os.system('pwd')
@@ -78,18 +77,19 @@ def processOneSubswath(subswathId, fm, fs):
         f.write(result.stdout)
     os.chdir('..')
     os.system('pwd')
-    
+
+
 def merge(skip_master, fmList, fsList):
-    if skip_master!=2:
+    if skip_master != 2:
         run('mkdir -p merge')
         os.chdir('merge')
         file_shuttle('../topo/dem.grd', '.', 'link')
         file_shuttle('../config.py', '.', 'cp')
         run("ln -s ../F1/intf/*/gauss* .")
-        if check_file_report('tmp.filelist')==True:
+        if check_file_report('tmp.filelist') is True:
             delete('tmp.filelist')
-        
-        pth = [getPathPrmFileName(subswathId=0), 
+
+        pth = [getPathPrmFileName(subswathId=0),
                getPathPrmFileName(subswathId=1),
                getPathPrmFileName(subswathId=2)]
         prm1m = [shortenPrmFileName(fmList[0]),
@@ -102,53 +102,72 @@ def merge(skip_master, fmList, fsList):
         with open('tmp.filelist', 'w') as f:
             for i in range(3):
                 f.write(pth[i]+'/:'+prm1m[i]+':'+prm1s[i]+'\n')
-                
+
         sys.path.insert(0, os.getcwd())
-        from config import correct_iono, iono_filt_rng, iono_filt_azi, det_stitch
+        from config import correct_iono, iono_filt_rng, iono_filt_azi, det_stitch # FIXME: Could use configparser to handle this
         mergeUnwrapGeocodeTops(correct_iono, det_stitch)
     else:
         print('P2P_S1_TOPS_FRAME: No radar product is produced as only master image is processed.')
-      
+
+
 def getPathPrmFileName(subswathId):
     intfDir = '../F'+str(subswathId+1)+'/intf'
     return glob.glob(intfDir+'/*')[0]
 
+
 def shortenPrmFileName(fn):
     return 'S1_'+fn[15:15+8]+'_'+fn[24:24+6]+'_F'+fn[6:7]+'.PRM'
 
+
 def mergeUnwrapGeocodeTops(correct_iono, det_stitch):
-    if correct_iono!=0:
+    if correct_iono != 0:
         print('not available yet for correct_iono!=0')
     else:
         file_shuttle('../config.py', '.', 'cp')
         run('merge_unwrap_geocode_tops.csh tmp.filelist config.py '+str(det_stitch))
 
+
 def p2pS1TopsFrame():
+    """
+    Usage: p2p_S1_TOPS_Frame.csh Master.SAFE Master.EOF Aligned.SAFE Aligned.EOF config.s1a.txt polarization parallel')
+
+    Example: p2p_S1_TOPS_Frame.csh S1A_IW_SLC__1SDV_20150607T014936_20150607T015003_006261_00832E_3626.SAFE S1A_OPER_AUX_POEORB_OPOD_20150615T155109_V20150525T225944_20150527T005944.EOF S1A_IW_SLC__1SSV_20150526T014935_20150526T015002_006086_007E23_679A.SAFE S1A_OPER_AUX_POEORB_OPOD_20150627T155155_V20150606T225944_20150608T005944.EOF config.s1a.txt vv 1')
+    Place the .SAFE file in the raw folder, DEM in the topo folder.')
+    During processing, F1, F2, F3 and merge folder will be generated.')
+    Final results will be placed in the merge folder, with phase.')
+    corr [unwrapped phase]')
+    polarization = vv vh hh or hv')
+    parallel = 0-sequential / 1-parallel')
+    Reference: Xu, X., Sandwell, D.T., Tymofyeyeva, E., González-Ortega, A. and Tong, X., ')
+       2017. Tectonic and Anthropogenic Deformation at the Cerro Prieto Geothermal ')
+       Step-Over Revealed by Sentinel-1A InSAR. IEEE Transactions on Geoscience and Remote Sensing.')
+    """
     print('P2P_S1_TOPS_FRAME - START')
 
     numOfArg = len(sys.argv)
     print('P2P_S1_TOPS_FRAME: arguments are ', sys.argv)
     print('P2P_S1_TOPS_FRAME: num of arguments are ', numOfArg)
-    if numOfArg!=8:
+    if numOfArg != 8:
         print('P2P_S1_TOPS_FRAME: Wrong # of input arguments; # should be 7 ... ...')
-        Error_Message()
-    
-    masterSafe = sys.argv[1]
+        print(p2pS1TopsFrame.__doc__)
+
+    masterSafe = sys.argv[1]  # FIXME: These should be function parameters instead of command line arguments
     masterEof = sys.argv[2]
     alignedSafe = sys.argv[3]
     alignedEof = sys.argv[4]
-    pol = sys.argv[6] 
+    pol = sys.argv[6]
     seq = int(sys.argv[7])
-    
-    if check_file_report('config.py')==True:
+
+    if check_file_report('config.py') is True:
+        # FIXME: Also, if this is handled with configparser, this check can be added to __init__.py and outcome handled there
         print('P2P_S1_TOPS_FRAME: config.py is provided; loading it.')
     else:
         print('P2P_S1_TOPS_FRAME: generating config.py')
         run('pop_config S1_TOPS')
-    if sys.argv[5]!= 'config.py':
+    if sys.argv[5] != 'config.py':
         sys.exit('P2P_S1_TOPS_FRAME: ERROR: config.py is missing, exiting')
-    
-    fmList = [getFilenameWithPolXml('raw/'+masterSafe, 'iw1', pol, '.xml'), 
+
+    fmList = [getFilenameWithPolXml('raw/'+masterSafe, 'iw1', pol, '.xml'),
               getFilenameWithPolXml('raw/'+masterSafe, 'iw2', pol, '.xml'),
               getFilenameWithPolXml('raw/'+masterSafe, 'iw3', pol, '.xml')]
     fsList = [getFilenameWithPolXml('raw/'+alignedSafe, 'iw1', pol, '.xml'),
@@ -156,22 +175,26 @@ def p2pS1TopsFrame():
               getFilenameWithPolXml('raw/'+alignedSafe, 'iw3', pol, '.xml')]
     print('P2P_S1_TOPS_FRAME: fmList is ', fmList)
     print('P2P_S1_TOPS_FRAME: fsList is ', fsList)
-    
+
     skip_master = grep_value('config.py', 'skip_master', 3)
-    
-    linkFiles(0, masterSafe, masterEof, alignedSafe, alignedEof, fmList, fsList)
-    linkFiles(1, masterSafe, masterEof, alignedSafe, alignedEof, fmList, fsList)
-    linkFiles(2, masterSafe, masterEof, alignedSafe, alignedEof, fmList, fsList)
+
+    linkFiles(0, masterSafe, masterEof, alignedSafe,
+              alignedEof, fmList, fsList)
+    linkFiles(1, masterSafe, masterEof, alignedSafe,
+              alignedEof, fmList, fsList)
+    linkFiles(2, masterSafe, masterEof, alignedSafe,
+              alignedEof, fmList, fsList)
 
     processingF1F2F3(seq, fmList, fsList)
-    
-    merge(skip_master, fmList, fsList) 
-    
+
+    merge(skip_master, fmList, fsList)
+
     print('P2P_S1_TOPS_FRAME - END')
+
 
 def _main_func(description):
     p2pS1TopsFrame()
 
-if __name__ == '__main__':
-    _main_func(__doc__)
 
+if __name__ == '__main__':  # FIXME: Change to allow imports and non-script use
+    _main_func(__doc__)

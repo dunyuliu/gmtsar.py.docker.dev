@@ -10,13 +10,21 @@
 # An ls will show raw SLC intf topo.
 """
 
-import sys, os, re, configparser
-import subprocess, glob, shutil
+import sys
+import os
+import re
+import configparser
+import subprocess
+import glob
+import shutil
 from gmtsar_lib import *
 
+# FIXME: remove unused imports
+
+
 def cleanup():
-    
-    def Error_Message():
+
+    def Error_Message():  # This is just documentation, and should be reformated as such
         print(' ')
         print('Usage: cleanup directory')
         print(' ')
@@ -24,9 +32,9 @@ def cleanup():
         print(' ')
         print('Example: cleanup all')
         print(' ')
-        
-    n = len(sys.argv)
-    if n<2:
+
+    n = len(sys.argv)  # FIXME: command line arguments are used instead of function parameters
+    if n < 2:
         # if no arguments were input ... ...
         print(' ')
         print('CLEANUP: ERROR - missing input args ... ...')
@@ -34,9 +42,9 @@ def cleanup():
         print(' ')
         Error_Message()
         sys.exit()
-        
+
     print("CLEANUP - START ... ...")
-    
+
     if str(sys.argv[1]) == 'all':
         print(' ')
         print('CLEANUP: cleanup all ... ...')
@@ -65,7 +73,7 @@ def cleanup():
         for filename in all_files:
             if filename != exclude_filename:
                 delete(filename)
-    
+
     if str(sys.argv[1]) == 'raw':
         print(' ')
         print('CLEANUP: cleanup raw/ folder ... ...')
@@ -73,19 +81,19 @@ def cleanup():
         delete('raw/*.raw')
         delete('raw/*.LED')
         print(' ')
-        
+
     if str(sys.argv[1]) == 'SLC':
         print(' ')
         print('CLEANUP: clean up SLC/ folder ... ...')
         delete('SLC/*')
         print(' ')
-    
+
     if str(sys.argv[1]) == 'intf':
         print(' ')
         print('CLEANUP: clean up intf/ folder ... ...')
         delete('intf/*')
         print(' ')
-        
+
     if str(sys.argv[1]) == 'topo':
         print(' ')
         print('CLEANUP: clean up topo/ folder ... ...')
@@ -97,13 +105,14 @@ def cleanup():
         for filename in all_files:
             if filename != exclude_filename:
                 delete(filename)
-        print(' ')   
-        
+        print(' ')
+
     print("CLEANUP - END ... ...")
+
 
 def _main_func(description):
     cleanup()
 
-if __name__ == "__main__":
-    _main_func(__doc__)
 
+if __name__ == "__main__":
+    _main_func(__doc__)  # FIXME: this dissallows importing the module
