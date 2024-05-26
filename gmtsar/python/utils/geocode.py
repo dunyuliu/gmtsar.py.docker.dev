@@ -39,58 +39,58 @@ def geocode():
     print(' ')
     cmd = 'gmt grdmath corr.grd ' + \
         sys.argv[1]+' GE 0 NAN mask.grd MUL = mask2.grd '+V
-    run(cmd)
+    run(cmd)  # FIXME: update to use wrapper
 
     cmd = 'gmt grdmath phase.grd mask2.grd MUL = phase_mask.grd'
-    run(cmd)
+    run(cmd)  # FIXME: See above
 
     if check_file_report('xphase.grd') is True:
-        run('gmt grdmath xphase.grd mask2.grd MUL = xphase_mask.grd')
-        run('gmt grdmath yphase.grd mask2.grd MUL = yphase_mask.grd')
+        grdmath('xphase.grd mask2.grd MUL = xphase_mask.grd')
+        grdmath('yphase.grd mask2.grd MUL = yphase_mask.grd')
 
     if check_file_report('unwrap.grd') is True:
-        run('''gmt grdsample mask2.grd `gmt grdinfo unwrap.grd -I-` `gmt grdinfo unwrap.grd -I` -Gmask3.grd''')
-        run('gmt grdmath unwrap.grd mask3.grd MUL = unwrap_mask.grd')
+        grdsample('mask2.grd `gmt grdinfo unwrap.grd -I-` `gmt grdinfo unwrap.grd -I` -Gmask3.grd')
+        grdmath('unwrap.grd mask3.grd MUL = unwrap_mask.grd')
 
     if check_file_report('phasefilt.grd') is True:
-        run('gmt grdmath phasefilt.grd mask2.grd MUL = phasefilt_mask.grd')
+        grdmath('phasefilt.grd mask2.grd MUL = phasefilt_mask.grd')
 
     print(' ')
     print('GEOCODE: look at the masked phase ... ...')
-    run('gmt grdimage phase_mask.grd -JX6.5i -Cphase.cpt -Bxaf+lRange -Byaf+lAzimuth -BWSen -X1.3i -Y3i -P -K > phase_mask.ps')
-    run('''gmt psscale -Rphase_mask.grd -J -DJTC+w5i/0.2i+h -Cphase.cpt -Bxa1.57+l"Phase" -By+lrad -O >> phase_mask.ps''')
-    run('gmt psconvert -Tf -P -A -Z phase_mask.ps')
+    grdimage('phase_mask.grd -JX6.5i -Cphase.cpt -Bxaf+lRange -Byaf+lAzimuth -BWSen -X1.3i -Y3i -P -K > phase_mask.ps')
+    psscale('-Rphase_mask.grd -J -DJTC+w5i/0.2i+h -Cphase.cpt -Bxa1.57+l"Phase" -By+lrad -O >> phase_mask.ps')
+    psconvert('-Tf -P -A -Z phase_mask.ps')
 
     print(' ')
     print('GEOCODE: maksed phase map: phase_mask,pdf ... ...')
 
     if check_file_report('xphase_mask.grd') is True:
-        run('gmt makecpt -Cgray -T-.3/.3/.1 -N -Z > xphase.cpt')
-        run('gmt grdimage xphase_mask.grd -JX8i -Cxphase.cpt -X.2i -Y.5i -P -K > xphase_mask.ps')
-        run('''gmt psscale -Rxphase_mask.grd -J -DJTC+w5i/0.2i+h -Cxphase.cpt -Bxa0.1+l"Phase" -By+lrad -O >> xphase_mask.ps''')
-        run('gmt psconvert -Tf -P -A -Z xphase_mask.ps')
+        makecpt('-Cgray -T-.3/.3/.1 -N -Z > xphase.cpt')
+        grdimage('xphase_mask.grd -JX8i -Cxphase.cpt -X.2i -Y.5i -P -K > xphase_mask.ps')
+        psscale('-Rxphase_mask.grd -J -DJTC+w5i/0.2i+h -Cxphase.cpt -Bxa0.1+l"Phase" -By+lrad -O >> xphase_mask.ps')
+        psconvert('-Tf -P -A -Z xphase_mask.ps')
 
         print(' ')
         print('GEOCODE: masked x phase map: xphase_mask.pdf ... ...')
 
-        run('gmt makecpt -Cgray -T-.6/.6/.1 -N -Z > yphase.cpt')
-        run('gmt grdimage yphase_mask.grd -JX8i -Cyphase.cpt -X.2i -Y.5i -P -K > yphase_mask.ps')
-        run('''gmt psscale -Ryphase_mask.grd -J -DJTC+w5i/0.2i+h -Cyphase.cpt -Bxa0.1+l"Phase" -By+lrad -O >> yphase_mask.ps''')
-        run('gmt psconvert -Tf -P -A -Z yphase_mask.ps')
+        makecpt('-Cgray -T-.6/.6/.1 -N -Z > yphase.cpt')
+        grdimage('yphase_mask.grd -JX8i -Cyphase.cpt -X.2i -Y.5i -P -K > yphase_mask.ps')
+        psscale('-Ryphase_mask.grd -J -DJTC+w5i/0.2i+h -Cyphase.cpt -Bxa0.1+l"Phase" -By+lrad -O >> yphase_mask.ps')
+        psconvert('-Tf -P -A -Z yphase_mask.ps')
 
         print(' ')
         print('GEOCODE: masked y phase map: yphase_mask.pdf ... ...')
 
     if check_file_report('unwrap_mask.grd') is True:
-        run('gmt grdimage unwrap_mask.grd -JX6.5i -Bxaf+lRange -Byaf+lAzimuth -BWSen -Cunwrap.cpt -X1.3i -Y3i -P -K > unwrap_mask.ps')
-        run('''gmt psscale -Runwrap_mask.grd -J -DJTC+w5i/0.2i+h+e -Cunwrap.cpt -Bxaf+l"Unwrapped phase" -By+lrad -O >> unwrap_mask.ps''')
-        run('gmt psconvert -Tf -P -A -Z unwrap_mask.ps')
+        grdimage('unwrap_mask.grd -JX6.5i -Bxaf+lRange -Byaf+lAzimuth -BWSen -Cunwrap.cpt -X1.3i -Y3i -P -K > unwrap_mask.ps')
+        psscale('-Runwrap_mask.grd -J -DJTC+w5i/0.2i+h+e -Cunwrap.cpt -Bxaf+l"Unwrapped phase" -By+lrad -O >> unwrap_mask.ps')
+        psconvert('-Tf -P -A -Z unwrap_mask.ps')
         print('GEOCODE: Unwrapped masked phase map: unwrap_mask.pdf ... ...')
 
     if check_file_report('phasefilt_mask.grd') is True:
-        run('gmt grdimage phasefilt_mask.grd -JX6.5i -Bxaf+lRange -Byaf+lAzimuth -BWSen -Cphase.cpt -X1.3i -Y3i -P -K > phasefilt_mask.ps')
-        run('''gmt psscale -Rphasefilt_mask.grd -J -DJTC+w5i/0.2i+h -Cphase.cpt -Bxa1.57+l"Phase" -By+lrad -O >> phasefilt_mask.ps''')
-        run('gmt psconvert -Tf -P -A -Z phasefilt_mask.ps')
+        grdimage('phasefilt_mask.grd -JX6.5i -Bxaf+lRange -Byaf+lAzimuth -BWSen -Cphase.cpt -X1.3i -Y3i -P -K > phasefilt_mask.ps')
+        psscale('-Rphasefilt_mask.grd -J -DJTC+w5i/0.2i+h -Cphase.cpt -Bxa1.57+l"Phase" -By+lrad -O >> phasefilt_mask.ps')
+        psconvert('-Tf -P -A -Z phasefilt_mask.ps')
         print('GEOCODE: Filtered masked phase map: phasefilt_mask.pdf')
 
     print(' ')
@@ -100,8 +100,8 @@ def geocode():
         wavel = grep_value('*.PRM', 'wavelength', 3)
         cmd = 'gmt grdmath unwrap_mask.grd ' + \
             str(wavel)+' MUL -79.58 MUL = los.grd'
-        run(cmd)
-        run('gmt grdgradient los.grd -Nt.9 -A0. -Glos_grad.grd')
+        run(cmd)  # FIXME: modify to use wrappers
+        grdgradient('los.grd -Nt.9 -A0. -Glos_grad.grd')
 
         cmd_grdinfo = ["gmt", "grdinfo", "-C", "-L2", "los.grd"]
         tmp_output = subprocess.check_output(
@@ -112,12 +112,11 @@ def geocode():
         limitL = float(tmp_values[11])-float(tmp_values[12])*2.
         limitL = round(limitL, 1)
 
-        run("gmt makecpt -Cpolar -Z -T"+str(limitL) +
-            "/"+str(limitU)+"/1 -D > los.cpt")
-        run('gmt grdimage los.grd -Ilos_grad.grd -Clos.cpt -Bxaf+lRange -Byaf+lAzimuth -BWSen -JX6.5i -X1.3i -Y3i -P -K > los.ps')
-        run(
-            '''gmt psscale -Rlos.grd -J -DJTC+w5i/0.2i+h+e -Clos.cpt -Bxaf+l"LOS displacement [range decrease @~\256@~]" -By+lmm -O >> los.ps''')
-        run('gmt psconvert -Tf -P -A -Z los.ps')
+        makecpt("-Cpolar -Z -T"+str(limitL) +"/"+str(limitU)+"/1 -D > los.cpt")
+        grdimage('los.grd -Ilos_grad.grd -Clos.cpt -Bxaf+lRange -Byaf+lAzimuth -BWSen -JX6.5i -X1.3i -Y3i -P -K > los.ps')
+        
+        psscale('-Rlos.grd -J -DJTC+w5i/0.2i+h+e -Clos.cpt -Bxaf+l"LOS displacement [range decrease @~\256@~]" -By+lmm -O >> los.ps')
+        psconvert('-Tf -P -A -Z los.ps')
         print('GEOCODE: Line-of-sight map: los.pdf ... ...')
 
     print(' ')
@@ -126,59 +125,59 @@ def geocode():
     print('GEOCODE: project correlation, phase, unwrapped and amplitude back to lon lat coordinates ... ...')
 
     remarked = ''  # FIXME: This variable is never used
-    run('proj_ra2ll trans.dat corr.grd corr_ll.grd')
-    run('''gmt grdedit -D//"dimensionless"/1///"$PWD:t geocoded correlation"/"$remarked"  corr_ll.grd''')
+    run('proj_ra2ll.py trans.dat corr.grd corr_ll.grd')  # FIXME: import these
+    grdedit('-D//"dimensionless"/1///"$PWD:t geocoded correlation"/"$remarked"  corr_ll.grd')
 
-    run('proj_ra2ll trans.dat phasefilt.grd   phasefilt_ll.grd')
-    run('''gmt grdedit -D//"radians"/1///"$PWD:t wrapped phase after filtering"/"$remarked"  phasefilt_ll.grd''')
-    run('proj_ra2ll trans.dat phase_mask.grd  phase_mask_ll.grd')
-    run('''gmt grdedit -D//"radians"/1///"$PWD:t wrapped phase after masking"/"$remarked"  phase_mask_ll.grd''')
-    run('proj_ra2ll trans.dat display_amp.grd display_amp_ll.grd')
-    run('''gmt grdedit -D//"dimensionless"/1///"PWD:t amplitude"/"$remarked"  display_amp_ll.grd''')
+    run('proj_ra2ll.py trans.dat phasefilt.grd   phasefilt_ll.grd')
+    grdedit('-D//"radians"/1///"$PWD:t wrapped phase after filtering"/"$remarked"  phasefilt_ll.grd')
+    run('proj_ra2ll.py trans.dat phase_mask.grd  phase_mask_ll.grd')
+    grdedit('-D//"radians"/1///"$PWD:t wrapped phase after masking"/"$remarked"  phase_mask_ll.grd')
+    run('proj_ra2ll.py trans.dat display_amp.grd display_amp_ll.grd')
+    grdedit('-D//"dimensionless"/1///"PWD:t amplitude"/"$remarked"  display_amp_ll.grd')
 
     if check_file_report('xphase_mask.grd') is True:
-        run('proj_ra2ll trans.dat xphase_mask.grd xphase_mask_ll.grd')
-        run('''gmt grdedit -D//"radians"/1///"$PWD:t xphase"/"$remarked"  xphase_mask_ll.grd''')
-        run('proj_ra2ll trans.dat yphase_mask.grd yphase_mask_ll.grd')
-        run('''gmt grdedit -D//"radians"/1///"$PWD:t yphase"/"$remarked"  yphase_mask_ll.grd''')
+        run('proj_ra2ll.py trans.dat xphase_mask.grd xphase_mask_ll.grd')
+        grdedit('-D//"radians"/1///"$PWD:t xphase"/"$remarked"  xphase_mask_ll.grd')
+        run('proj_ra2ll.py trans.dat yphase_mask.grd yphase_mask_ll.grd')
+        grdedit('-D//"radians"/1///"$PWD:t yphase"/"$remarked"  yphase_mask_ll.grd')
 
     if check_file_report('unwrap_mask.grd') is True:
-        run('proj_ra2ll trans.dat unwrap_mask.grd unwrap_mask_ll.grd')
-        run('''gmt grdedit -D//"radians"/1///"PWD:t unwrapped, masked phase"/"$remarked"  unwrap_mask_ll.grd''')
+        run('proj_ra2ll.py trans.dat unwrap_mask.grd unwrap_mask_ll.grd')
+        grdedit('-D//"radians"/1///"PWD:t unwrapped, masked phase"/"$remarked"  unwrap_mask_ll.grd')
 
     if check_file_report('unwrap.grd') is True:
-        run('proj_ra2ll trans.dat unwrap.grd unwrap_ll.grd')
-        run('''gmt grdedit -D//"radians"/1///"PWD:t unwrapped phase"/"$remarked"  unwrap_ll.grd''')
+        run('proj_ra2ll.py trans.dat unwrap.grd unwrap_ll.grd')
+        grdedit('-D//"radians"/1///"PWD:t unwrapped phase"/"$remarked"  unwrap_ll.grd')
 
     if check_file_report('phasefilt_mask.grd') is True:
-        run('proj_ra2ll trans.dat phasefilt_mask.grd phasefilt_mask_ll.grd')
-        run('''gmt grdedit -D//"phase in radians"/1///"PWD:t wrapped phase masked filtered"/"$remarked"   phasefilt_mask_ll.grd''')
+        run('proj_ra2ll.py trans.dat phasefilt_mask.grd phasefilt_mask_ll.grd')
+        grdedit('-D//"phase in radians"/1///"PWD:t wrapped phase masked filtered"/"$remarked"   phasefilt_mask_ll.grd')
 
     print(' ')
     print('GEOCODE: now image for google earth ... ...')
     print('GEOCODE: make the MKL files for Google Earth ... ...')
 
-    run('grd2kml display_amp_ll display_amp.cpt')
-    run('grd2kml corr_ll corr.cpt')
-    run('grd2kml phase_mask_ll phase.cpt')
-    run('grd2kml phasefilt_mask_ll phase.cpt')
+    run('grd2kml.py display_amp_ll display_amp.cpt')
+    run('grd2kml.py corr_ll corr.cpt')
+    run('grd2kml.py phase_mask_ll phase.cpt')
+    run('grd2kml.py phasefilt_mask_ll phase.cpt')
 
     if check_file_report('xphase_mask_ll.grd') is True:
-        run('grd2kml xphase_mask_ll xphase.cpt')
-        run('grd2kml yphase_mask_ll yphase.cpt')
+        run('grd2kml.py xphase_mask_ll xphase.cpt')
+        run('grd2kml.py yphase_mask_ll yphase.cpt')
 
     if check_file_report('unwrap_mask_ll.grd') is True:
-        run('grd2kml unwrap_mask_ll unwrap.cpt')
+        run('grd2kml.py unwrap_mask_ll unwrap.cpt')
 
     if check_file_report('phasefilt_mask_ll.grd') is True:
-        run('grd2kml phasefilt_mask_ll phase.cpt')
+        run('grd2kml.py phasefilt_mask_ll phase.cpt')
 
     if check_file_report('unwrap_mask_ll.grd') is True:
         # constant is negative to make LOS = -1 * range change
         # constant is (1000 mm) / (4 * pi)
-        run('gmt grdmath unwrap_mask_ll.grd $wavel MUL -79.58 MUL = los_ll.grd')
-        run('''gmt grdedit -D//"mm"/1///"$PWD:t LOS displacement"/"equals negative range" los_ll.grd''')
-        run('grd2kml los_ll los.cpt')
+        grdmath('unwrap_mask_ll.grd $wavel MUL -79.58 MUL = los_ll.grd')
+        grdedit('-D//"mm"/1///"$PWD:t LOS displacement"/"equals negative range" los_ll.grd')
+        run('grd2kml.py los_ll los.cpt')
 
     print("GEOCODE - END ... ...")
 # NOTE: given the number of calls to check_file_report, code could be condensed by using a list of files to check,

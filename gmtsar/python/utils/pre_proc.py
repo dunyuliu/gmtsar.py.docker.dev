@@ -32,7 +32,7 @@ def preprocAlos(SAT, master, aligned, skip_master, cmdAppendix):
             check_file_report('IMG-HH-'+masterCut+'.PRM')):
         print('PREPROC: pre_process master image')
         if (skip_master == 0 or skip_master == 2):
-            run('ALOS_pre_process IMG-HH-'+masterCut +
+            ALOS_pre_process('IMG-HH-'+masterCut +
                 ' LED-'+masterCut+' '+cmdAppendix)
 
     NEAR = float(grep_value('IMG-HH-'+masterCut+'.PRM', 'near_range', 3))
@@ -43,7 +43,7 @@ def preprocAlos(SAT, master, aligned, skip_master, cmdAppendix):
     print('PREPROC: unpack the alignedCut image using the same earth radius and near range as the masterCut image')
 
     if skip_master == 0 or skip_master == 1:
-        run('ALOS_pre_process IMG-HH-'+alignedCut+' LED-'+alignedCut +
+        ALOS_pre_process(' IMG-HH-'+alignedCut+' LED-'+alignedCut +
             ' -fd1 '+str(FD1)+' -near '+str(NEAR) + ' -radius '+str(RAD) +
             ' -npatch '+str(num_patches) + ' -fd1 '+str(FD1))
         print('PREPROC: check the range sampling rate of the alignedCut images and \
@@ -55,19 +55,19 @@ def preprocCskraw(master, aligned, skip_master, RAD, FD1):
     print('PREPROC: pre-process CSK Raw data - START')
     if skip_master == 0 or skip_master == 2:
         processedFile = master
-        run('make_raw_csk '+processedFile+'.h5 '+processedFile)
+        make_raw_csk(processedFile+'.h5 '+processedFile)
         file_shuttle(processedFile+'.PRM', processedFile+'.PRM0', 'mv')
-        run('calc_dop_orb '+processedFile+'.PRM0 ' +
+        calc_dop_orb(processedFile+'.PRM0 ' +
             processedFile+'.log '+str(RAD)+' '+str(FD1))
         run('cat '+processedFile+'.PRM0 ' +
-            processedFile+'.log > '+processedFile+'.PRM')
+            processedFile+'.log > '+processedFile+'.PRM')  #FIXME: this can be done by opeing and writing to a new file. True for all instances of this in this script
         append_new_line(processedFile+'.PRM', 'fdd1 = 0')
         append_new_line(processedFile+'.PRM', 'fddd1 = 0')
     if skip_master == 0 or skip_master == 1:
         processedFile = aligned
-        run('make_raw_csk '+processedFile+'.h5 '+processedFile)
+        make_raw_csk(processedFile+'.h5 '+processedFile)
         file_shuttle(processedFile+'.PRM', processedFile+'.PRM0', 'mv')
-        run('calc_dop_orb '+processedFile+'.PRM0 ' +
+        calc_dop_orb(processedFile+'.PRM0 ' +
             processedFile+'.log '+str(RAD)+' '+str(FD1))
         run('cat '+processedFile+'.PRM0 ' +
             processedFile+'.log > '+processedFile+'.PRM')
@@ -84,7 +84,7 @@ def preprocErs(master, aligned, skip_master, NEAR, RAD, num_patches, FD1):
     print('PREPROC: set 0 for master to use its own value')
 
     if (skip_master == 0 or skip_master == 2):
-        run('ERS_pre_process '+master+' '+str(NEAR)+' ' +
+        ERS_pre_process(master+' '+str(NEAR)+' ' +
             str(RAD)+' '+str(num_patches)+' '+str(FD1))
 
     NEAR = grep_value(master+'.PRM', 'near_range', 3)
@@ -93,7 +93,7 @@ def preprocErs(master, aligned, skip_master, NEAR, RAD, num_patches, FD1):
     num_patches = grep_value(master+'.PRM', 'num_patches', 3)
 
     if (skip_master == 0 or skip_master == 1):
-        run('ERS_pre_process '+aligned+' '+str(NEAR) +
+        ERS_pre_process(aligned+' '+str(NEAR) +
             ' '+str(RAD)+' '+str(num_patches)+' '+str(FD1))
 
     updatePrm(master, aligned, skip_master, 'num_patches')
@@ -105,12 +105,12 @@ def preprocErs(master, aligned, skip_master, NEAR, RAD, num_patches, FD1):
     # fda = 0.5*(grep_value(master+'.PRM', 'fd1', 3)+grep_value(aligned+'.PRM', 'fd1', 3))
     # print('PREPROC: use average Doppler', fda)
 
-    # run('update_PRM '+master+'.PRM fd1 '+str(fda))
-    # run('update_PRM '+aligned+'.PRM fd1 '+str(fda))
+    # update_prm '+master+'.PRM fd1 '+str(fda))
+    # update_prm '+aligned+'.PRM fd1 '+str(fda))
 
     # elif (skip_master == 1):
     # fda = grep_value(master+'.PRM', 'fd1', 3)
-    # run('update_PRM '+aligned+'.PRM fd1 '+str(fda))
+    # update_prm '+aligned+'.PRM fd1 '+str(fda))
 
     print('PREPROC: Pre-Process ERS data - END')
 
@@ -129,30 +129,30 @@ def updatePrm(master, aligned, skip_master, var):
         if var == 'num_patches':
             print('PREPROC: check patch number, if different, use the smaller one')
             if numM < numA:
-                run('update_PRM '+aligned+'.PRM '+var+' '+str(numM))
+                update_prm(aligned+'.PRM '+var+' '+str(numM))
             elif numM > numA:
-                run('update_PRM '+master+'.PRM '+var+' '+str(numA))
+                update_prm(master+'.PRM '+var+' '+str(numA))
         elif var == 'fd1':
             print('PREPROC: set the Doppler to be the average of the two')
             fda = 0.5*(numM+numA)
-            run('update_PRM '+master+'.PRM '+var+' '+str(fda))
-            run('update_PRM '+aligned+'.PRM '+var+' '+str(fda))
+            update_prm(master+'.PRM '+var+' '+str(fda))
+            update_prm(aligned+'.PRM '+var+' '+str(fda))
     elif skip_master == 1:
         numM = grep_value(master+'.PRM', varNameInPrmFile, 3)
-        run('update_PRM '+aligned+'.PRM '+var+' '+str(numM))
+        update_prm(aligned+'.PRM '+var+' '+str(numM))
 
 
 def preprocEnvi(master, aligned, skip_master, NEAR, RAD, num_patches, FD1):
     print('PREPROC: Pre-Process ENVISAT data - START')
     if (skip_master == 0 or skip_master == 2):
-        run('ENVI_pre_process '+master+' '+str(NEAR) +
+        ENVI_pre_process(master+' '+str(NEAR) +
             ' '+str(RAD)+' '+str(num_patches)+' '+str(FD1))
 
     NEAR = grep_value(master+'.PRM', 'near_range', 3)
     RAD = grep_value(master+'.PRM', 'earth_radius', 3)
 
     if (skip_master == 0 or skip_master == 1):
-        run('ENVI_pre_process '+aligned+' '+str(NEAR) +
+        ENVI_pre_process(aligned+' '+str(NEAR) +
             ' '+str(RAD)+' '+str(num_patches)+' '+str(FD1))
 
     updatePrm(master, aligned, skip_master, 'num_patches')
@@ -163,11 +163,11 @@ def preprocEnvi(master, aligned, skip_master, NEAR, RAD, num_patches, FD1):
 def preprocEnvislc(master, aligned, skip_master, RAD):
     print('PREPROC: Pre-process ENVISAT SLC data - START')
     if skip_master == 0 or skip_master == 2:
-        run('ENVI_SLC_pre_process '+master+' '+str(RAD))
+        ENVI_SLC_pre_process_csh(master+' '+str(RAD))
     NEAR = grep_value(master+'.PRM', 'near_range', 3)  # FIXME: not used
     RAD = grep_value(master+'.PRM', 'earth_radius', 3)
     if skip_master == 0 or skip_master == 1:
-        run('ENVI_SLC_pre_process '+aligned+' '+str(RAD))
+        ENVI_SLC_pre_process_csh(aligned+' '+str(RAD))
     print('PREPROC: Pre-process ENVISAT SLC data - END')
 
 
@@ -194,10 +194,10 @@ def preprocAlosslcAlos2Alosscan(SAT, master, aligned, skip_master, cmdAppendix):
     if SAT == 'ALOS_SLC':
         additionalFlag = '-ALOS1'
     if skip_master == 0 or skip_master == 2:
-        run('ALOS_pre_process_SLC '+'IMG-'+masterCut+' LED-' +
+        ALOS_pre_process_SLC('IMG-'+masterCut+' LED-' +
             masterLed+' '+cmdAppendix+' '+additionalFlag)
     if skip_master == 0 or skip_master == 1:
-        run('ALOS_pre_process_SLC IMG-'+alignedCut+' LED-' +
+        ALOS_pre_process_SLC('IMG-'+alignedCut+' LED-' +
             alignedLed+' '+cmdAppendix+' '+additionalFlag)
 
     print(' ')
@@ -239,11 +239,11 @@ def fdb2fbs(SAT, master, aligned, prefix=''):
 
     if masterOrAligned >= 1:
         print('PREPROC: Convert the '+imageName+' image from FBD to FBS mode')
-        run(scriptName+' '+prefix+imageName+'.PRM '+prefix+imageName+'_FBS.PRM')
+        run(scriptName+' '+prefix+imageName+'.PRM '+prefix+imageName+'_FBS.PRM')  # FIXME: run call - not sure yet how to fix but should be able to
         print('PREPROC: Overwriting the old '+imageName+' image')
         file_shuttle(prefix+imageName+'_FBS.PRM',
                      prefix+imageName+'.PRM', 'mv')
-        run('update_PRM '+prefix+imageName +
+        update_prm(prefix+imageName +
             '.PRM input_file '+prefix+imageName+fileFormat)
         file_shuttle(prefix+imageName+'_FBS'+fileFormat,
                      prefix+imageName+fileFormat, 'mv')
@@ -260,74 +260,74 @@ def preprocOthers(SAT, master, aligned, skip_master, RAD):
 
     if SAT == 'CSK_SLC':
         if skip_master == 0 or skip_master == 2:
-            run('make_slc_csk '+master+'.h5 '+master)
+            make_slc_csk(master+'.h5 '+master)
         if skip_master == 0 or skip_master == 1:
-            run('make_slc_csk '+aligned+'.h5 '+aligned)
+            make_slc_csk(aligned+'.h5 '+aligned)
     elif SAT == 'TSX':
         if skip_master == 0 or skip_master == 2:
-            run('make_slc_tsx '+master+'.xml '+master+'.cos '+master)
+            make_slc_tsx(master+'.xml '+master+'.cos '+master)
         if skip_master == 0 or skip_master == 1:
-            run('make_slc_tsx '+aligned+'.xml '+aligned+'.cos '+aligned)
+            make_slc_tsx(aligned+'.xml '+aligned+'.cos '+aligned)
     elif SAT == 'RS2':
         if skip_master == 0 or skip_master == 2:
-            run('make_slc_rs2 '+master+'.xml '+master+'.tif '+master)
+            make_slc_rs2(master+'.xml '+master+'.tif '+master)
             file_shuttle(master+'.LED', 'save-'+master+'.LED', 'mv')
-            run('extend_orbit save-'+master+'.LED '+master+'.LED 3')
+            extend_orbit('save-'+master+'.LED '+master+'.LED 3')
         if skip_master == 0 or skip_master == 1:
-            run('make_slc_rs2 '+aligned+'.xml '+aligned+'.tif '+aligned)
+            make_slc_rs2(aligned+'.xml '+aligned+'.tif '+aligned)
             file_shuttle(aligned+'.LED', 'save-'+aligned+'.LED', 'mv')
-            run('extend_orbit save-'+aligned+'.LED '+aligned+'.LED 3')
+            extend_orbit('save-'+aligned+'.LED '+aligned+'.LED 3')
     elif SAT == 'GF3':
         if skip_master == 0 or skip_master == 2:
-            run('make_slc_gf3 '+master+'.xml '+master+'.tiff '+master)
+            make_slc_gf3(master+'.xml '+master+'.tiff '+master)
         if skip_master == 0 or skip_master == 1:
-            run('make_slc_gf3 '+aligned+'.xml '+aligned+'.tiff '+aligned)
+            make_slc_gf3(aligned+'.xml '+aligned+'.tiff '+aligned)
     elif SAT == 'LT1':
         if skip_master == 0 or skip_master == 2:
-            run('make_slc_lt1 '+master+'.xml '+master+'.tiff '+master)
+            make_slc_lt1(master+'.xml '+master+'.tiff '+master)
         if skip_master == 0 or skip_master == 1:
-            run('make_slc_lt1 '+aligned+'.xml '+aligned+'.tiff '+aligned)
+            make_slc_lt1(aligned+'.xml '+aligned+'.tiff '+aligned)
     else:
         if skip_master == 0 or skip_master == 2:
-            run('make_slc_s1a '+master+'.xml '+master+'.tif '+master)
+            make_slc_s1a(master+'.xml '+master+'.tif '+master)
             file_shuttle(master+'.LED', 'save-'+master+'.LED', 'mv')
-            run('extend_orbit save-'+master+'.LED '+master+'.LED 3')
+            extend_orbit('save-'+master+'.LED '+master+'.LED 3')
         if skip_master == 0 or skip_master == 1:
-            run('make_slc_s1a '+aligned+'.xml '+aligned+'.tif '+aligned)
+            make_slc_s1a(aligned+'.xml '+aligned+'.tif '+aligned)
             file_shuttle(aligned+'.LED', 'save-'+aligned+'.LED', 'mv')
-            run('extend_orbit save-'+aligned+'.LED '+aligned+'.LED 3')
+            extend_orbit('save-'+aligned+'.LED '+aligned+'.LED 3')
 
     print('PREPROC: set the num_lines to be the min of the master and aligned ... ...')
     if skip_master == 0:
         m_lines = int(grep_value('../raw/'+master+'.PRM', 'num_lines', 3))
         s_lines = int(grep_value('../raw/'+aligned+'.PRM', 'num_lines', 3))
         if s_lines < m_lines:
-            run('update_PRM '+master+'.PRM num_lines '+str(s_lines))
-            run('update_PRM '+master+'.PRM num_valid_az '+str(s_lines))
-            run('update_PRM '+master+'.PRM nrows '+str(s_lines))
+            update_prm(master+'.PRM num_lines '+str(s_lines))
+            update_prm(master+'.PRM num_valid_az '+str(s_lines))
+            update_prm(master+'.PRM nrows '+str(s_lines))
         else:
-            run('update_PRM '+aligned+'.PRM num_lines '+str(m_lines))
-            run('update_PRM '+aligned+'.PRM num_valid_az '+str(m_lines))
-            run('update_PRM '+aligned+'.PRM nrows '+str(m_lines))
+            update_prm(aligned+'.PRM num_lines '+str(m_lines))
+            update_prm(aligned+'.PRM num_valid_az '+str(m_lines))
+            update_prm(aligned+'.PRM nrows '+str(m_lines))
     else:
         if skip_master == 1:
             m_lines = int(grep_value('../raw/'+master+'.PRM', 'num_lines', 3))
-            run('update_PRM '+aligned+'.PRM num_lines '+str(m_lines))
-            run('update_PRM '+aligned+'.PRM num_valid_az '+str(m_lines))
-            run('update_PRM '+aligned+'.PRM nrows '+str(m_lines))
+            update_prm(aligned+'.PRM num_lines '+str(m_lines))
+            update_prm(aligned+'.PRM num_valid_az '+str(m_lines))
+            update_prm(aligned+'.PRM nrows '+str(m_lines))
     print(' ')
     print('PREPROC: calculate SC_vel and SC_height ... ...')
     print('PREPROC: set the Doppler to be zero ... ...')
     if skip_master == 0 or skip_master == 2:
         file_shuttle(master+'.PRM', master+'.PRM0', 'cp')
-        run('calc_dop_orb '+master+'.PRM0 '+master+'.log '+str(RAD)+' 0')
+        calc_dop_orb(master+'.PRM0 '+master+'.log '+str(RAD)+' 0')
         run('cat '+master+'.PRM0 '+master+'.log > '+master+'.PRM')
         append_new_line(master+'.PRM', 'fdd1 = 0')
         append_new_line(master+'.PRM', 'fddd1 = 0')
 
     if skip_master == 0 or skip_master == 1:
         file_shuttle(aligned+'.PRM', aligned+'.PRM0', 'cp')
-        run('calc_dop_orb '+aligned+'.PRM0 '+aligned+'.log '+str(RAD)+' 0')
+        calc_dop_orb(aligned+'.PRM0 '+aligned+'.log '+str(RAD)+' 0')
         run('cat '+aligned+'.PRM0 '+aligned+'.log >'+aligned+'.PRM')
         append_new_line(aligned+'.PRM', 'fdd1 = 0')
         append_new_line(aligned+'.PRM', 'fddd1 = 0')
@@ -345,7 +345,7 @@ def preprocS1tops(master, aligned, skip_master, ESD_mode):
     if check_file_report('../topo/dem.grd') is False:
         print('PREPROC: missing file ../topo/dem.grd')
 
-    run('ln -s ../topo/dem.grd .')
+    run('ln -s ../topo/dem.grd .')  # FIXME: us os
     if ESD_mode == 0:
         additionalFlag = ''
         scriptName = 'align_tops.csh'

@@ -36,16 +36,16 @@ def landmask():
 
     print(' ')
     print('LANDMASK: require full resolution coastline from GMT ... ...')
-    run("gmt grdlandmask -Glandmask.grd `gmt grdinfo -I- dem.grd` `gmt grdinfo -I dem.grd` "+str(V)+" -NNaN/1 -Df")
-    run("proj_ll2ra.csh trans.dat landmask.grd landmask_ra.grd")
-    run("gmt grdsample landmask_ra.grd -Gtmp.grd -R" +
+    grdlandmask(" -Glandmask.grd `gmt grdinfo -I- dem.grd` `gmt grdinfo -I dem.grd` "+str(V)+" -NNaN/1 -Df")
+    run("proj_ll2ra.csh trans.dat landmask.grd landmask_ra.grd")  # FIXME implimer
+    grdsample("landmask_ra.grd -Gtmp.grd -R" +
         sys.argv[1]+" -I4/8 -nl+t0.1")
     file_shuttle('tmp.grd', 'landmask_ra.grd', 'mv')
 
     print(' ')
     print('LANDMASK: if the landmask region is smaller than the region_cut pad with NaN ... ...')
-    run('gmt grd2xyz landmask_ra.grd -bo > landmask_ra.xyz')
-    run("gmt xyz2grd landmask_ra.xyz -bi -r -R" +
+    grd2xyz('landmask_ra.grd -bo > landmask_ra.xyz')
+    xyz2grd("landmask_ra.xyz -bi -r -R" +
         sys.argv[1]+" `gmt grdinfo -I landmask_ra.grd` -Gtmp.grd")
     file_shuttle('tmp.grd', 'landmask_ra.grd', 'mv')
 

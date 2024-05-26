@@ -113,7 +113,7 @@ def fitoffset():
                 for i in range(npar):
                     c[i] = c[i]+float(coeff[4+i])
                 # print(coeff, line)
-        delete('xyz')
+        delete('xyz')  # FIXME: USe os.remove
         return c
 
     c012 = get_coeff_trend2d(xcorr_r, xcorr_a, xcorr_dr, npar_rng)

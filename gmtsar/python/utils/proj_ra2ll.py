@@ -40,7 +40,7 @@ def proj_ra2ll():
 
     print(' ')
     print('PROJ_RA2ll: extract the phase in the r a positions ... ...')
-    run('gmt grd2xyz '+sys.argv[2]+' -s -bo3f > rap')
+    grd2xyz(sys.argv[2]+' -s -bo3f > rap')
 
     print(' ')
     print('PROJ_RA2ll: make grids of longitude and latitude versus range and azimuth unless they already exist ... ...')
@@ -61,7 +61,7 @@ def proj_ra2ll():
     print(' ')
     print('PROJ_RA2ll: add lon and lat columns and then just keep lon, lat, phase ... ...')
 
-    run('gmt grdtrack rap -nl -bi3f -bo5f -Graln.grd -Gralt.grd | gmt gmtconvert -bi5f -bo3f -o3,4,2 > llp')
+    grdtrack('rap -nl -bi3f -bo5f -Graln.grd -Gralt.grd | gmt gmtconvert -bi5f -bo3f -o3,4,2 > llp')
 
     print('PROJ_RA2ll: set the output grid spaccing to be 1/4 the filter wavelength ... ...')
 
@@ -96,7 +96,7 @@ def proj_ra2ll():
     cmd = 'gmt xyz2grd llpb '+R+' -I' + \
         incs[0]+'  -r -fg -G'+sys.argv[3]+' -bi3f'
     run(cmd)
-    run('rm rap* llp llpb raln ralt')
+    run('rm rap* llp llpb raln ralt')  # FIXME: use os.remove() instead of run()
 
     print("PROJ_RA2ll - END ... ...")
 

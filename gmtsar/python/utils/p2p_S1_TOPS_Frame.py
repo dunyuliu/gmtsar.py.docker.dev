@@ -24,7 +24,7 @@ def getFilenameWithPolXml(searchDir, searchStr1, pol, fileFormat):
 
 def linkFiles(subswathId, masterSafe, masterEof, alignedSafe, alignedEof, fmList, fsList):
     rootDir = 'F'+str(subswathId+1)
-    run('mkdir -p '+rootDir)
+    run('mkdir -p '+rootDir)  # FIXME: use os.mkdir
     run('mkdir -p '+rootDir+'/raw')
     run('mkdir -p '+rootDir+'/topo')
     os.chdir(rootDir)
@@ -81,11 +81,11 @@ def processOneSubswath(subswathId, fm, fs):
 
 def merge(skip_master, fmList, fsList):
     if skip_master != 2:
-        run('mkdir -p merge')
+        run('mkdir -p merge')  # FIXME: Use os.mkdir
         os.chdir('merge')
         file_shuttle('../topo/dem.grd', '.', 'link')
         file_shuttle('../config.py', '.', 'cp')
-        run("ln -s ../F1/intf/*/gauss* .")
+        run("ln -s ../F1/intf/*/gauss* .")  # FIXME: find os command for this
         if check_file_report('tmp.filelist') is True:
             delete('tmp.filelist')
 
@@ -119,12 +119,12 @@ def shortenPrmFileName(fn):
     return 'S1_'+fn[15:15+8]+'_'+fn[24:24+6]+'_F'+fn[6:7]+'.PRM'
 
 
-def mergeUnwrapGeocodeTops(correct_iono, det_stitch):
+def mergeUnwrapGeocodeTops(correct_iono, det_stitch):  # TODO: encorperate into the wrapper
     if correct_iono != 0:
         print('not available yet for correct_iono!=0')
     else:
         file_shuttle('../config.py', '.', 'cp')
-        run('merge_unwrap_geocode_tops.csh tmp.filelist config.py '+str(det_stitch))
+        merge_unwrap_geocode_tops_csh('tmp.filelist config.py '+str(det_stitch))
 
 
 def p2pS1TopsFrame():
@@ -163,7 +163,7 @@ def p2pS1TopsFrame():
         print('P2P_S1_TOPS_FRAME: config.py is provided; loading it.')
     else:
         print('P2P_S1_TOPS_FRAME: generating config.py')
-        run('pop_config S1_TOPS')
+        run('pop_config.py S1_TOPS')  # FIXME: Python script call
     if sys.argv[5] != 'config.py':
         sys.exit('P2P_S1_TOPS_FRAME: ERROR: config.py is missing, exiting')
 

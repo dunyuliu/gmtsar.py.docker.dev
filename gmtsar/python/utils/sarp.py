@@ -25,7 +25,7 @@ def sarp():
     slcfile = sys.argv[1][0:-3]+'SLC'
     print("SARP: slcfile is ", slcfile)
 
-    run('esarp '+sys.argv[1]+' '+slcfile+' > tmp_sarp')
+    esarp(sys.argv[1]+' '+slcfile+' > tmp_sarp')
     print("SARP: update the PRM file")
 
     with open(sys.argv[1], 'r') as f:
@@ -45,7 +45,7 @@ def sarp():
 
     print("SARP: put in dfact into PRM file")
     dfact = grep_value('tmp_sarp', 'I2SCALE', 2)
-    run('update_PRM '+sys.argv[1]+' SLC_scale '+str(dfact))
+    update_prm(sys.argv[1]+' SLC_scale '+str(dfact))
     delete('tmp_sarp')
     print('SARP: Finishing sarp ... ...')
 

@@ -45,7 +45,7 @@ def intf():
 
     Example: intf IMG-HH-ALPSRP055750660-H1.0__A.PRM IMG-HH-ALPSRP049040660-H1.0__A.PRM -topo topo_ra.grd
     """
-    run('gmt set IO_NC4_CHUNK_SIZE classic')
+    gmtset('IO_NC4_CHUNK_SIZE classic')
 
     n = len(sys.argv)
     arg = sys.argv[1:]  # put all the arguments to a list, arg
@@ -76,6 +76,7 @@ def intf():
     if n in (3, 5, 7):
         cmd = 'phasediff'
         for i in range(n-1):  # FIXME: This could be done with a ' '.join(arg) instead
+            # FIXME: update to use phasediff wrapper
             cmd = cmd + ' '+str(arg[i])
         run(cmd)
     else:

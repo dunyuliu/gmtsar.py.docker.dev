@@ -43,13 +43,13 @@ def slc2amp():
     if (sys.argv[1].find('PRM') >= 0 or sys.argv[1].find('prm') >= 0) and sys.argv[3].find('grd') >= 0:
         print(' ')
         print('SLC2AMP: range decimation is ', sys.argv[2])
-        run('conv 4 '+sys.argv[2]+' '+fil1+' ' +  # FIXME: Undefined variable
+        conv('4 '+sys.argv[2]+' '+fil1+' ' +  # FIXME: Undefined variable
             sys.argv[1]+' '+sys.argv[3]+'=bf')
     else:
         print('SLC2AMP: wrong filename, exiting ... ...')
 
     print('SLC2AMP: get the zmin and zmax values ... ...')
-    run('gmt grdmath '+sys.argv[3]+'=bf 1 MUL = '+sys.argv[3])
+    grdmath(sys.argv[3]+'=bf 1 MUL = '+sys.argv[3])
 
     print("SLC2AMP - END ... ...")
 

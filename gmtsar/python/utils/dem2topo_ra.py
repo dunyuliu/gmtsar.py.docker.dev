@@ -92,10 +92,10 @@ def dem2topo_ra():
 
     print('DEM2TOPO_RA: range decimation rng is ', rng)
     if SC == 10 or SC == 11:
-        run('gmt grd2xyz --FORMAT_FLOAT_OUT=%lf ' +
+        grd2xyz('--FORMAT_FLOAT_OUT=%lf ' +
             sys.argv[2]+' -s | SAT_llt2rat '+sys.argv[1]+' 1 -bod  > trans.dat')
     else:
-        run('gmt grd2xyz --FORMAT_FLOAT_OUT=%lf ' +
+        grd2xyz('--FORMAT_FLOAT_OUT=%lf ' +
             sys.argv[2]+' -s | SAT_llt2rat '+sys.argv[1]+' 0 -bod  > trans.dat')
 
     print(' ')
@@ -103,10 +103,10 @@ def dem2topo_ra():
 
     if PRF < 1000:
         print('DEM2TOPO_RA: if PRF<1000, then ... ...')
-        run("gmt gmtconvert trans.dat -o0,1,2 -bi5d -bo3d | gmt blockmedian -R" +
+        gmtconvert("trans.dat -o0,1,2 -bi5d -bo3d | gmt blockmedian -R" +
             str(region)+" -I"+str(rng)+"/2 -bi3d -bo3d -r "+str(V)+" > temp.rat ")
         if mode == 0:
-            run("gmt surface temp.rat -R"+str(region)+" -I"+str(rng) +
+            surface("temp.rat -R"+str(region)+" -I"+str(rng) +
                 "/2 -bi3d -T"+str(tension)+" -N1000 -Gpixel.grd -r -Q >& tmp")
 
             print('DEM2TOPO_RA: ?? is it possible that file tmp is not created? ... ')
@@ -135,32 +135,32 @@ def dem2topo_ra():
             print('DEM2TOPO_RA: RR is ', RR)
 
             if RR == []:  # if RR is empty or unset
-                run("gmt surface temp.rat -R"+str(region)+" -I"+str(rng) +
+                surface("temp.rat -R"+str(region)+" -I"+str(rng) +
                     "/2 -bi3d -T"+str(tension)+" -N1000 -Gpixel.grd -r "+str(V))
             else:
-                run("gmt surface temp.rat "+str(RR)+" -I"+str(rng) +
+                surface("temp.rat "+str(RR)+" -I"+str(rng) +
                     "/2 -bi3d -T"+str(tension)+" -N1000 -Gpixel.grd -r "+str(V))
-                run("gmt grdcut pixel.grd -R"+str(region)+" -Gtmp.grd")
+                grdcut("pixel.grd -R"+str(region)+" -Gtmp.grd")
                 file_shuttle('tmp.grd', 'pixel.grd', 'mv')
         elif mode == 1:
             rng2 = rng*8
             print('DEM2TOPO_RA: mode == 1 and rng2 is ', rng2)
-            run("gmt triangulate temp.rat -R"+str(region)+" -I" +
+            triangulate("temp.rat -R"+str(region)+" -I" +
                 str(rng)+"/2 -bi3d -Gtopo_ra_tmp.grd -r "+str(V))
-            run("gmt blockmean temp.rat -R"+str(region) +
+            blockmean("temp.rat -R"+str(region) +
                 " -I"+str(rng2)+"/16 -bi3d -bo3d -r > mean.rat")
-            run("gmt surface mean.rat -R"+str(region)+" -I" +
+            surface("mean.rat -R"+str(region)+" -I" +
                 str(rng2)+"/16 -bi3d -T0.1 -N1000 -Gcoarse.grd -r")
-            run("gmt grdfill topo_ra_tmp.grd -Agcoarse.grd -Gpixel.grd")
+            grdfill("topo_ra_tmp.grd -Agcoarse.grd -Gpixel.grd")
             delete('topo_ra_tmp.grd')
             delete('coarse.grd')
             delete('mean.rat')
     else:
         print('DEM2TOPO_RA: if PRF>=1000, then ... ...')
-        run("gmt gmtconvert trans.dat -o0,1,2 -bi5d -bo3d | gmt blockmedian -R" +
+        gmtconvert("trans.dat -o0,1,2 -bi5d -bo3d | gmt blockmedian -R" +
             str(region)+" -I"+str(rng)+"/4 -bi3d -bo3d -r "+str(V)+" > temp.rat")
         if mode == 0:
-            run("gmt surface temp.rat -R"+str(region)+" -I"+str(rng) +
+            surface("temp.rat -R"+str(region)+" -I"+str(rng) +
                 "/4 -bi3d -T"+str(tension)+" -N1000 -Gpixel.grd -r -Q >& tmp")
 
             print('DEM2TOPO_RA: ?? is it possible that file tmp is not created? ... ')
@@ -190,38 +190,38 @@ def dem2topo_ra():
             print('DEM2TOPO_RA: RR is ', RR)
 
             if RR == []:  # if RR is empty or unset
-                run("gmt surface temp.rat -R"+str(region)+" -I"+str(rng) +
+                surface("temp.rat -R"+str(region)+" -I"+str(rng) +
                     "/4 -bi3d -T"+str(tension)+" -N1000 -Gpixel.grd -r "+str(V))
             else:
-                run("gmt surface temp.rat "+str(RR)+" -I"+str(rng) +
+                surface("temp.rat "+str(RR)+" -I"+str(rng) +
                     "/4 -bi3d -T"+str(tension)+" -N1000 -Gpixel.grd -r "+str(V))
-                run("gmt grdcut pixel.grd -R"+str(region)+" -Gtmp.grd")
+                grdcut("pixel.grd -R"+str(region)+" -Gtmp.grd")
                 file_shuttle('tmp.grd', 'pixel.grd', 'mv')
         elif mode == 1:
             rng2 = rng*8
             print('DEM2TOPO_RA: mode == 1 and rng2 is ', rng2)
-            run("gmt triangulate temp.rat -R"+str(region)+" -I" +
+            triangulate("temp.rat -R"+str(region)+" -I" +
                 str(rng)+"/4 -bi3d -Gtopo_ra_tmp.grd -r "+str(V))
-            run("gmt blockmean temp.rat -R"+str(region) +
+            blockmean("temp.rat -R"+str(region) +
                 " -I"+str(rng2)+"/32 -bi3d -bo3d -r > mean.rat")
-            run("gmt surface mean.rat -R"+str(region)+" -I" +
+            surface("mean.rat -R"+str(region)+" -I" +
                 str(rng2)+"/32 -bi3d -T0.1 -N1000 -Gcoarse.grd -r")
-            run("gmt grdfill topo_ra_tmp.grd -Agcoarse.grd -Gpixel.grd")
+            grdfill("topo_ra_tmp.grd -Agcoarse.grd -Gpixel.grd")
             delete('topo_ra_tmp.grd')
             delete('coarse.grd')
             delete('mean.rat')
 
     print(' ')
     print('DEM2TOPO_RA: flip top to bottom for both ascending and descending passes ... ...')
-    run('gmt grdmath pixel.grd FLIPUD = topo_ra.grd')
+    grdmath('pixel.grd FLIPUD = topo_ra.grd')
 
     print(' ')
     print('DEM2TOPO_RA: plotting ... ...')
-    run('gmt grd2cpt topo_ra.grd -Cgray '+str(V)+' -Z > topo_ra.cpt')
-    run('''gmt grdimage topo_ra.grd '''+str(scale) +
+    grd2cpt('topo_ra.grd -Cgray '+str(V)+' -Z > topo_ra.cpt')
+    grdimage('''topo_ra.grd '''+str(scale) +
         ''' -P -Ctopo_ra.cpt -Bxaf+lRange -Byaf+l"Reversed Azimuth" -BWSen '''+str(V)+''' -K > topo_ra.ps''')
-    run("gmt psscale -Rtopo_ra.grd -J -DJTC+w5i/0.2i+h -Ctopo_ra.cpt -Bxaf -By+lm -O >> topo_ra.ps")
-    run('gmt psconvert -Tf -P -A -Z topo_ra.ps')
+    psscale("-Rtopo_ra.grd -J -DJTC+w5i/0.2i+h -Ctopo_ra.cpt -Bxaf -By+lm -O >> topo_ra.ps")
+    psconvert('-Tf -P -A -Z topo_ra.ps')
 
     print(' ')
     print("DEM2TOPO_RA: Topo range/azimuth map: topo_ra.pdf")

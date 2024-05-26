@@ -96,10 +96,10 @@ def P2P1Preprocess(SAT, master, aligned, skip_master, cmdAppendix):
         master = sys.argv[2]
         aligned = sys.argv[3]
 
-    os.chdir("raw")  # run("cd raw") didn't work.
+    os.chdir("raw")  # cd raw") didn't work.
     os.system('pwd')
     print('P2P 1: entering directory raw/')
-    run('pre_proc '+SAT + ' '+master+' '+aligned+' '+cmdAppendix)
+    run('pre_proc.py '+SAT + ' '+master+' '+aligned+' '+cmdAppendix)
 
     print('P2P 1: exiting directory raw/')
     os.chdir('..')
@@ -222,11 +222,11 @@ def P2P2FocusAlign(SAT, master, aligned, skip_master, iono):
 
         if SAT == "ERS" or SAT == "ENVI" or SAT == "ALOS" or SAT == "CSK_RAW":
 
-            print('P2P 2: calling sarp for SAT==ERS/ENVI/ALOS/CSK_RAW')
+            print('P2P 2: calling sarp.py for SAT==ERS/ENVI/ALOS/CSK_RAW')
             if skip_master == 0 or skip_master == 2:
-                run("sarp " + master + ".PRM")
+                run("sarp.py " + master + ".PRM")
             if skip_master == 0 or skip_master == 1:
-                run("sarp " + aligned + ".PRM")
+                run("sarp.py " + aligned + ".PRM")
 
         if iono == 1:
             print(" ")
@@ -235,9 +235,9 @@ def P2P2FocusAlign(SAT, master, aligned, skip_master, iono):
             if skip_master == 0 or skip_master == 2:
                 file_path = f"../raw/ALOS_fbd2fbs_log_{aligned}"
                 if check_file_report(file_path) is True:
-                    run("split_spectrum " + master + ".PRM 1 > params1")
+                    split_spectrum(master + ".PRM 1 > params1")
                 else:
-                    run("split_spectrum " + master + ".PRM > params1")
+                    split_spectrum(master + ".PRM > params1")
 
                 file_shuttle('SLCH', '../SLC_H/'+master+'.SLC', 'mv')
                 file_shuttle('SLCL', '../SLC_L/'+master+'.SLC', 'mv')
@@ -264,9 +264,9 @@ def P2P2FocusAlign(SAT, master, aligned, skip_master, iono):
             if skip_master == 0 or skip_master == 1:
                 file_path = f"../raw/ALOS_fbd2fbs_log_{aligned}"
                 if check_file_report(file_path):
-                    run("split_spectrum " + aligned + ".PRM 1 > params2")
+                    split_spectrum(aligned + ".PRM 1 > params2")
                 else:
-                    run("split_spectrum " + aligned + ".PRM > params2")
+                    split_spectrum(aligned + ".PRM > params2")
 
                 cmd = "mv SLCH ../SLC_H/" + aligned + ".SLC"
                 run(cmd)
@@ -294,11 +294,11 @@ def P2P2FocusAlign(SAT, master, aligned, skip_master, iono):
         #
         if skip_master == 0 or skip_master == 1:
             file_shuttle(aligned+'.PRM', aligned+'.PRM0', 'cp')
-            run("SAT_baseline " + master + ".PRM " +
+            SAT_baseline(master + ".PRM " +
                 aligned + ".PRM0 >> " + aligned + ".PRM")
 
             if SAT == "ALOS2_SCAN":
-                run("xcorr " + master + ".PRM " + aligned +
+                xcorr(master + ".PRM " + aligned +
                     ".PRM -xsearch 32 -ysearch 256 -nx 32 -ny 128")
                 # set amedian = `sort -n tmp.dat | awk ' { a[i++]=$1; } END { print a[int(i/2)]; }'`
                 # set amax = `echo $amedian | awk '{print $1+3}'`
@@ -306,15 +306,15 @@ def P2P2FocusAlign(SAT, master, aligned, skip_master, iono):
                 # awk '{if($4 > '$amin' && $4 < '$amax') print $0}' < freq_xcorr.dat > freq_alos2.dat
                 # fitoffset 2 3 freq_alos2.dat 10 >> $aligned.PRM
             elif SAT == "ERS" or SAT == "ENVI" or SAT == "ALOS" or SAT == "CSK_RAW":
-                run("xcorr " + master + ".PRM " + aligned +
+                xcorr(master + ".PRM " + aligned +
                     ".PRM -xsearch 128 -ysearch 128 -nx 20 -ny 50")
-                run("fitoffset 3 3 freq_xcorr.dat 18 >> " + aligned + ".PRM")
+                run("fitoffset.py 3 3 freq_xcorr.dat 18 >> " + aligned + ".PRM")
             else:
-                run("xcorr " + master + ".PRM " + aligned +
+                xcorr(master + ".PRM " + aligned +
                     ".PRM -xsearch 128 -ysearch 128 -nx 20 -ny 50")
-                run("fitoffset 2 2 freq_xcorr.dat 18 >> " + aligned + ".PRM")
+                run("fitoffset.py 2 2 freq_xcorr.dat 18 >> " + aligned + ".PRM")
 
-            run("resamp " + master + ".PRM " + aligned + ".PRM " +
+            resamp(master + ".PRM " + aligned + ".PRM " +
                 aligned + ".PRMresamp " + aligned + ".SLCresamp 4")
             delete(aligned + ".SLC")
             file_shuttle(aligned+'.SLCresamp', aligned+'.SLC', 'mv')
@@ -418,7 +418,7 @@ def P2P2FocusAlign(SAT, master, aligned, skip_master, iono):
                 file_shuttle("../raw/offset*dat", ".", "link")
 
             if skip_master == 0:
-                run("align_tops.csh "+sys.argv[1]+" "+sys.argv[1] +
+                align_tops_csh(sys.argv[1]+" "+sys.argv[1] +
                     ".EOF "+sys.argv[2]+" "+sys.argv[2]+".EOF dem.grd 1")
             elif skip_master == 1:
                 cmd = "align_tops.csh " + \
@@ -485,12 +485,12 @@ def P2P2RegionCut(master, aligned, skip_master, iono):
     print("P2P 2: region_cut !=-999 ")
     print("P2P 2: cutting SLC image to " + str(region_cut))
     if skip_master == 0 or skip_master == 2:
-        run("cut_slc " + master + ".PRM junk1 " + str(region_cut))
+        cut_slc(master + ".PRM junk1 " + str(region_cut))
         run("mv junk1.PRM " + master + ".PRM")
         run("mv junk1.SLC " + master + ".SLC")
 
     if skip_master == 0 or skip_master == 1:
-        run("cut_slc " + aligned + ".PRM junk2 " + str(region_cut))
+        cut_slc(aligned + ".PRM junk2 " + str(region_cut))
         run("mv junk2.PRM " + aligned + ".PRM")
         run("mv junk2.SLC " + aligned + ".SLC")
 
@@ -499,11 +499,11 @@ def P2P2RegionCut(master, aligned, skip_master, iono):
         print('P2P 2: entering SLC_L')
         os.chdir("../SLC_L")
         if (skip_master == 0 or skip_master == 2):
-            run("cut_slc "+master+".PRM junk1 "+str(region_cut))
+            cut_slc(master+".PRM junk1 "+str(region_cut))
             file_shuttle("junk1.PRM", master+".PRM", "mv")
             file_shuttle("junk1.SLC", master+".SLC", "mv")
         if (skip_master == 0 or skip_master == 1):
-            run("cut_slc "+aligned+".PRM junk2 "+str(region_cut))
+            cut_slc(aligned+".PRM junk2 "+str(region_cut))
             file_shuttle("junk2.PRM", master+".PRM", "mv")
             file_shuttle("junk2.SLC", master+".SLC", "mv")
 
@@ -511,11 +511,11 @@ def P2P2RegionCut(master, aligned, skip_master, iono):
         print('P2P 2: entering SLC_H')
         os.chdir("../SLC_H")
         if (skip_master == 0 or skip_master == 2):
-            run("cut_slc "+master+".PRM junk1 "+str(region_cut))
+            cut_slc(master+".PRM junk1 "+str(region_cut))
             file_shuttle("junk1.PRM", master+".PRM", "mv")
             file_shuttle("junk1.SLC", master+".SLC", "mv")
         if (skip_master == 0 or skip_master == 1):
-            run("cut_slc "+aligned+".PRM junk2 "+str(region_cut))
+            cut_slc(aligned+".PRM junk2 "+str(region_cut))
             file_shuttle("junk2.PRM", master+".PRM", "mv")
             file_shuttle("junk2.SLC", master+".SLC", "mv")
 
@@ -523,7 +523,7 @@ def P2P2RegionCut(master, aligned, skip_master, iono):
 # FIXME: aligned is never used in this function.
 def P2P3MakeTopo(master, aligned, topo_phase, topo_interp_mode, shift_topo):
     print('P2P 3: start from make topo_ra')
-    run("cleanup topo")
+    run("cleanup.py topo")
 
     print('P2P 3: make topo_ra if there is dem.grd')
     if topo_phase == 1:
@@ -540,9 +540,9 @@ def P2P3MakeTopo(master, aligned, topo_phase, topo_interp_mode, shift_topo):
         # FIXME: if check_file_report('dem.grd'): to test truthiness
         if check_file_report('dem.grd') is True:
             if topo_interp_mode == 1:
-                run("dem2topo_ra master.PRM dem.grd 1")
+                run("dem2topo_ra.py master.PRM dem.grd 1")
             else:
-                run("dem2topo_ra master.PRM dem.grd")
+                run("dem2topo_ra.py master.PRM dem.grd")
         else:
             print("no DEM file found: ", dem.grd)
             sys.exit(1)
@@ -557,16 +557,16 @@ def P2P3MakeTopo(master, aligned, topo_phase, topo_interp_mode, shift_topo):
             os.chdir('SLC')
             # FIXME: rng_samp_rate is never used.
             rng_samp_rate = grep_value(master+".PRM", "rng_samp_rate", 3)
-            run("gmt grdinfo ../topo/topo_ra.grd > tmp.txt")
+            grdinfo("../topo/topo_ra.grd > tmp.txt")
             rng = grep_value("tmp.txt", "x_inc", 7)
-            run('slc2amp.csh '+master+'.PRM '+str(rng)+' amp-'+master+'.grd')
+            slc2amp_csh(master+'.PRM '+str(rng)+' amp-'+master+'.grd') # TODO: This should invoke the python verson of slc2amp
             print('P2P 3: exiting SLC/')
             os.chdir("..")
 
             print('P2P 3: entering topo/')
             os.chdir("topo")
             file_shuttle("../SLC/amp-"+master+".grd", ".", "link")
-            run('offset_topo amp-'+master+'.grd topo_ra.grd 0 0 7 topo_shift.grd')
+            offset_topo('amp-'+master+'.grd topo_ra.grd 0 0 7 topo_shift.grd')
             print('P2P 3: exiting topo/')
             os.chdir("..")
             print("P2P 3: OFFSET_TOPO - END")
@@ -600,14 +600,14 @@ def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, az
                                  dec, filt, compute_phase_gradient, iono, iono_dsamp):  # FIXME: use variable name other than 'filter' as it is a reserved keyword.
 
     print('P2P 4: start from make and filter interferograms')
-    run('mkdir -p intf')
-    run('cleanup intf')
+    run('mkdir -p intf')  # FIXME: use os
+    run('cleanup.py intf')
 
     print('P2P 4: INTF.CSH, FILTER.CSH - START')
     print('P2P 4: entering intf/')
     os.chdir('intf')
     intfSubDirName = getIntfSubDirName(ref, rep)
-    run('mkdir -p '+intfSubDirName)
+    run('mkdir -p '+intfSubDirName)  # FIXME: use os
     os.chdir(intfSubDirName)
 
     run('ln -sf ../../SLC/'+ref + '.LED .')
@@ -620,17 +620,17 @@ def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, az
     if topo_phase == 1:
         if shift_topo == 1:
             run('ln -s ../../topo/topo_shift.grd .')
-            run('intf ' + ref + '.PRM ' + rep + '.PRM -topo topo_shift.grd')
+            run('intf.py ' + ref + '.PRM ' + rep + '.PRM -topo topo_shift.grd')
             runFilter(ref, rep, filt, dec, range_dec,
                       azimuth_dec, compute_phase_gradient)
         else:
             run('ln -s ../../topo/topo_ra.grd .')
-            run('intf ' + ref + '.PRM ' + rep + '.PRM -topo topo_ra.grd')
+            run('intf.py ' + ref + '.PRM ' + rep + '.PRM -topo topo_ra.grd')
             runFilter(ref, rep, filt, dec, range_dec,
                       azimuth_dec, compute_phase_gradient)
     else:
         print('P2P 4: NO TOPOGRAPHIC PHASE REMOVAL PORFORMED')
-        run('intf '+ref+'.PRM '+rep+'.PRM')
+        run('intf.py '+ref+'.PRM '+rep+'.PRM')
         runFilter(ref, rep, filt, dec, range_dec,
                   azimuth_dec, compute_phase_gradient)
 
@@ -666,19 +666,19 @@ def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, az
         if topo_phase == 1:
             if shift_topo == 1:
                 file_shuttle('../../topo/topo_shift.grd', '.', 'link')
-                run('intf '+ref+'.PRM '+rep+'.PRM -topo topo_shift.grd')
-                run('filter '+ref+'.PRM '+rep+'.PRM 500 ' +
+                run('intf.py '+ref+'.PRM '+rep+'.PRM -topo topo_shift.grd')
+                run('filter.py '+ref+'.PRM '+rep+'.PRM 500 ' +
                     dec+' '+new_incx+' '+new_incy)
             else:
                 file_shuttle('../../topo/topo_ra.grd', '.', 'link')
 
-                run('intf '+ref+'.PRM '+rep+'.PRM -topo topo_ra.grd')
-                run('filter '+ref+'.PRM '+rep+'.PRM 500 ' +
+                run('intf.py '+ref+'.PRM '+rep+'.PRM -topo topo_ra.grd')
+                run('filter.py '+ref+'.PRM '+rep+'.PRM 500 ' +
                     dec+' '+new_incx+' '+new_incy)
         else:
             print('NO TOPOGRAPHIC PHASE REMOVAL PORFORMED')
-            run('intf '+ref+'.PRM '+rep+'.PRM')
-            run('filter '+ref+'.PRM '+rep+'.PRM 500 ' +
+            run('intf.py '+ref+'.PRM '+rep+'.PRM')
+            run('filter.py '+ref+'.PRM '+rep+'.PRM 500 ' +
                 dec+' '+new_incx+' '+new_incy)
 
         file_shuttle('phase.grd', 'phasefilt.grd', 'cp')
@@ -690,11 +690,11 @@ def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, az
                 rcut = output[2:20].decode('utf-8')
 
                 os.chdir('../../topo')
-                run('landmask '+rcut)
+                run('landmask.py' + rcut)  #FIXME: use imports
                 os.chdir('../iono_phase/intf_h')
                 file_shuttle('../../topo/landmask_ra.grd', '.', 'link')
 
-            run('snaphu_interp.csh 0.05 0')
+            snaphu_interp_csh('0.05 0')
         os.chdir('..')
         os.chdir('intf_h')
         files = glob.glob('../../SLC_L/*.SLC')
@@ -742,7 +742,7 @@ def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, az
             cmd = 'filter '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
             run(cmd)
         # endif (topo_phase == 1)
-
+        # FIXME: Above run commands should use wrappers
         file_shuttle('phase.grd', 'phasefilt.grd', 'cp')
 
         if iono_skip_est == 0:
@@ -821,11 +821,11 @@ def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, az
             run(cmd)
             os.chdir('../../intf/'+intfSubDirName)
             file_shuttle('phasefilt.grd', 'phasefilt_non_corrected.grd', 'mv')
-            run('grdsample ../../iono_phase/iono_correction/ph_iono_orig.grd -Rphasefilt_non_corrected.grd -Gph_iono.grd')
-            run('grdmath phasefilt_non_corrected.grd ph_iono.grd SUB PI ADD 2 PI MUL MOD PI SUB = phasefilt.grd')
-            run('grdimage phasefilt.grd -JX6.5i -Bxaf+lRange -Byaf+lAzimuth -BWSen -Cphase.cpt -X1.3i -Y3i -P -K > phasefilt.ps')
-            run('psscale -Rphasefilt.grd -J -DJTC+w5i/0.2i+h -Cphase.cpt -Bxa1.57+l"Phase" -By+lrad -O >> phasefilt.ps')
-            run('gmt psconvert -Tf -P -A -Z phasefilt.ps')
+            grdsample('../../iono_phase/iono_correction/ph_iono_orig.grd -Rphasefilt_non_corrected.grd -Gph_iono.grd')
+            grdmath('phasefilt_non_corrected.grd ph_iono.grd SUB PI ADD 2 PI MUL MOD PI SUB = phasefilt.grd')
+            grdimage('phasefilt.grd -JX6.5i -Bxaf+lRange -Byaf+lAzimuth -BWSen -Cphase.cpt -X1.3i -Y3i -P -K > phasefilt.ps')
+            psscale('-Rphasefilt.grd -J -DJTC+w5i/0.2i+h -Cphase.cpt -Bxa1.57+l"Phase" -By+lrad -O >> phasefilt.ps')
+            psconvert('-Tf -P -A -Z phasefilt.ps')
 
         os.chdir('../../')
     print('INTF.CSH, FILTER.CSH - END')
@@ -833,10 +833,10 @@ def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, az
 
 def runFilter(ref, rep, filt, dec, range_dec, azimuth_dec, compute_phase_gradient):  # FIXME: use variable name other than 'filter' as it is a reserved keyword.
     if range_dec == -999 and azimuth_dec == -999:  # FIXME: f strings could condense this and preform implicit type conversion
-        run('filter '+ref+'.PRM '+rep+'.PRM '+str(filt) +
+        run('filter.py '+ref+'.PRM '+rep+'.PRM '+str(filt) +
             ' '+str(dec)+' '+str(compute_phase_gradient))
     else:
-        run('filter '+ref+'.PRM '+rep+'.PRM '+str(filt)+' '+str(dec)+' ' +
+        run('filter.py '+ref+'.PRM '+rep+'.PRM '+str(filt)+' '+str(dec)+' ' +
             str(range_dec)+' '+str(azimuth_dec)+' '+str(compute_phase_gradient))
 
 
@@ -860,16 +860,16 @@ def P2P5Unwrap(ref, rep, threshold_snaphu, mask_water, switch_land, near_interp)
             r_cut = "gmt grdinfo phase.grd -I- | cut -c3-20"
             os.chdir("../../topo")
             if check_file_report(landmask_ra.grd) is False:
-                run("landmask " + r_cut)
+                run("landmask.py " + r_cut)  # FIXME: use imports
             os.chdir("../intf")
             os.chdir(intfSubDirName)
             run("ln -sf ../../topo/landmask_ra.grd .")
         print('P2P 5: SNAPHU.CSH - START')
         print('P2P 5: threshold_snaphu = ', threshold_snaphu)
         if near_interp == 1:
-            run("snaphu_interp.csh " + str(threshold_snaphu) + " " + str(defomax))
+            snaphu_interp_csh(str(threshold_snaphu) + " " + str(defomax))
         else:
-            run("snaphu.csh " + str(threshold_snaphu) + " " + str(defomax))
+            run("snaphu.csh " + str(threshold_snaphu) + " " + str(defomax))  # FIXME: This is implmented in python
         print('P2P 5: SNAPHU.CSH - END')
         os.chdir("../..")
     else:
@@ -895,7 +895,7 @@ def P2P6Geocode(ref, rep, threshold_geocode, topo_phase):
         if topo_phase == 1:
             run('ln -sf ../../topo/trans.dat .')
             print('threshold_geocode: ', threshold_geocode)
-            run('geocode ' + str(threshold_geocode))
+            run('geocode.py ' + str(threshold_geocode))
         else:
             print('P2P 6: topo_ra is needed to geocode')
             sys.exit(1)
@@ -934,14 +934,14 @@ def p2p_processing(debug):
         if check_file_report(sys.argv[4]) is False:
             print('P2P 0: WARNING: the 4th arg config.py is required but missing ... ...')
             print('P2P 0: WARNING: a default config.py is being generated ... ...')
-            run('pop_config ' + SAT)
+            run('pop_config.py ' + SAT)
         elif check_file_report(sys.argv[4]) is True:
             print(
                 'P2P 0: a customized config.py is provided and will be used to tune GMTSAR workflow ... ...')
     elif n == 4:
         print('P2P 0: no config.py is provided ... ...')
         print('P2P 0: and a default one will be generated by p2p_config ... ...')
-        run('pop_config ' + SAT)
+        run('pop_config.py ' + SAT)
 
     print('P2P 0: read in parameters from the config.py ... ...')
     sys.path.insert(0, os.getcwd())
@@ -1084,11 +1084,11 @@ def p2p_processing(debug):
 
     if (stage <= 2 and skip_2 == 0):
         print('P2P 2: start from focus and align SLC images')
-        run('mkdir -p SLC')
+        run('mkdir -p SLC')  # FIXME: use os
 
         if iono == 1:
             print('P2P 2: creating SLC_L and SLC_H for iono==1')
-            run('mkdir -p SLC_L SLC_H')
+            run('mkdir -p SLC_L SLC_H')  # FIXME: use os
         if SAT == 'S1_TOPS':
             master, aligned = renameMasterAlignedForS1tops(master, aligned)
         print('master, aligned should be modified for SAT==S1_TOPS', master, aligned)

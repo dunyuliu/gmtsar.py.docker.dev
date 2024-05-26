@@ -51,9 +51,9 @@ def snaphu():
 
     print('SNAPHU: prepare the files adding the correlation mask ... ...')
     if n == 5:
-        run('gmt grdcut mask.grd -R'+sys.argv[4]+' -Gmask_patch.grd')
-        run('gmt grdcut corr.grd -R'+sys.argv[4]+' -Gcorr_patch.grd')
-        run('gmt grdcut phasefilt.grd -R'+sys.argv[4]+' -Gphase_patch.grd')
+        grdcut('mask.grd -R'+sys.argv[4]+' -Gmask_patch.grd')
+        grdcut('corr.grd -R'+sys.argv[4]+' -Gcorr_patch.grd')
+        grdcut('phasefilt.grd -R'+sys.argv[4]+' -Gphase_patch.grd')
     else:
         file_shuttle('mask.grd', 'mask_patch.grd', 'link')
         file_shuttle('corr.grd', 'corr_patch.grd', 'link')
@@ -67,46 +67,46 @@ def snaphu():
             par_tmp = subprocess.run(["gmt", "grdinfo", "-I", "phase_patch.grd"],
                                      stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
             print('SNAPHU: par_tmp is ', par_tmp)
-            run('gmt grdsample landmask_ra.grd -R' +
+            grdsample('landmask_ra.grd -R' +
                 sys.argv[4]+' '+par_tmp+' -Glandmask_ra_patch.grd')
         else:
             if interp == 0:
-                run('gmt grdsample landmask_ra.grd -Rphase_patch.grd -Glandmask_ra_patch.grd')
+                grdsample('landmask_ra.grd -Rphase_patch.grd -Glandmask_ra_patch.grd')
             elif interp == 1:
                 par = catch_output_cmd(
                     ["gmt", "grdinfo", "-I", "phase_patch.grd"], False, -999, -100000)
-                run('gmt grdsample landmask_ra.grd ' +
+                grdsample('landmask_ra.grd ' +
                     par+' -Glandmask_ra_patch.grd')
         print(' ')
-        run('gmt grdmath phase_patch.grd landmask_ra_patch.grd MUL = phase_patch.grd '+V)
+        grdmath('phase_patch.grd landmask_ra_patch.grd MUL = phase_patch.grd '+V)
 
     print(' ')
     print('SNAPHU: user defined mask ... ...')
 
     if check_file_report('mask_def.grd') is True:
         if n == 5:
-            run('gmt grdcut mask_def.grd -R' +
+            grdcut('mask_def.grd -R' +
                 sys.argv[4]+' -Gmask_def_patch.grd')
         else:
             file_shuttle('mask_def.grd', 'mask_def_patch.grd', 'cp')
 
         print(' ')
-        run('gmt grdmath corr_patch.grd mask_def_patch.grd MUL = corr_patch.grd '+V)
+        grdmath('corr_patch.grd mask_def_patch.grd MUL = corr_patch.grd '+V)
 
-    run('gmt grdmath corr_patch.grd ' +
+    grdmath('corr_patch.grd ' +
         sys.argv[1]+' GE 0 NAN mask_patch.grd MUL = mask2_patch.grd')
-    run('gmt grdmath corr_patch.grd 0. XOR 1. MIN  = corr_patch.grd')
-    run('gmt grdmath mask2_patch.grd corr_patch.grd MUL = corr_tmp.grd')
+    grdmath('corr_patch.grd 0. XOR 1. MIN  = corr_patch.grd')
+    grdmath('mask2_patch.grd corr_patch.grd MUL = corr_tmp.grd')
 
     if interp == 0:
-        run('gmt grd2xyz phase_patch.grd -ZTLf -do0 > phase.in')
+        grd2xyz('phase_patch.grd -ZTLf -do0 > phase.in')
     elif interp == 1:
-        run('gmt grdmath mask2_patch.grd phase_patch.grd MUL = phase_tmp.grd')
-        run('nearest_grid phase_tmp.grd tmp.grd 300')
+        grdmath('mask2_patch.grd phase_patch.grd MUL = phase_tmp.grd')
+        nearest_grid('phase_tmp.grd tmp.grd 300')
         file_shuttle('tmp.grd', 'phase_tmp.grd', 'mv')
-        run('gmt grd2xyz phase_tmp.grd -ZTLf -do0 > phase.in')
+        grd2xyz('phase_tmp.grd -ZTLf -do0 > phase.in')
 
-    run('gmt grd2xyz corr_tmp.grd -ZTLf  -do0 > corr.in')
+    grd2xyz('corr_tmp.grd -ZTLf  -do0 > corr.in')
 
     print(' ')
     print('SNAPHU: run snaphu ... ...')
@@ -121,7 +121,7 @@ def snaphu():
     print('SNAPHU: output from gmt grdinfo -C phase_patch.grd | cut -f 10 is ', par_tmp)
 
     if float(sys.argv[2]) == 0:
-        run('snaphu phase.in '+par_tmp+' -f '+sharedir +
+        run('snaphu phase.in '+par_tmp+' -f '+sharedir +  # FIXME: use arguments to make recursive call
             '/snaphu/config/snaphu.conf.brief -c corr.in -o unwrap.out -v -s -g conncomp.out')
     else:
         print('SNAPHU: replacing the line containing DEFOMAX_CYCLE to DEFOMAX_CYCLE $2 from snaphu.conf.brief... ...')
@@ -142,11 +142,11 @@ def snaphu():
     print('SNAPHU: output from gmt grdinfo -I- phase_patch.grd is', par1)
     print('SNAPHU: output from gmt grdinfo -I phase_patch.grd is', par2)
 
-    run('gmt xyz2grd unwrap.out -ZTLf -r '+par1+' '+par2+' -Gtmp.grd')
+    xyz2grd('unwrap.out -ZTLf -r '+par1+' '+par2+' -Gtmp.grd')
     print(' ')
     print('SNAPHU: generate connected component ... ...')
-    run('gmt xyz2grd conncomp.out -ZTLu -r '+par1+' '+par2+' -Gconncomp.grd')
-    run('gmt grdmath tmp.grd mask2_patch.grd MUL = tmp.grd')
+    xyz2grd('conncomp.out -ZTLu -r '+par1+' '+par2+' -Gconncomp.grd')
+    grdmath('tmp.grd mask2_patch.grd MUL = tmp.grd')
 
     print(' ')
     print('SNAPHU: detrend the unwrapped if DEFOMAX = 0 for interseismic ... ...')
@@ -155,19 +155,19 @@ def snaphu():
     print(' ')
     print('SNAPHU: landmask ... ...')
     if check_file_report('landmask_ra.grd') is True:
-        run('gmt grdmath unwrap.grd landmask_ra_patch.grd MUL = tmp.grd '+V)
+        grdmath('unwrap.grd landmask_ra_patch.grd MUL = tmp.grd '+V)
         file_shuttle('tmp.grd', 'unwrap.grd', 'mv')
 
     print(' ')
     print('SNAPHU: user defined mask ... ...')
     if check_file_report('mask_def.grd') is True:
-        run('gmt grdmath unwrap.grd mask_def_patch.grd MUL = tmp.grd '+V)
+        grdmath('unwrap.grd mask_def_patch.grd MUL = tmp.grd '+V)
         file_shuttle('tmp.grd', 'unwrap.grd', 'mv')
 
     print(' ')
     print('SNAPHU: plot the unwrapped phase ... ...')
 
-    run('gmt grdgradient unwrap.grd -Nt.9 -A0. -Gunwrap_grad.grd')
+    grdgradient('unwrap.grd -Nt.9 -A0. -Gunwrap_grad.grd')
     tmp = catch_output_cmd(
         ["gmt", "grdinfo", "-C", "-L2", "unwrap.grd"], True, -999, -100000)
     print('SNAPHU: output from cmd gmt grdinfo -C -L2 unwrap.grd is',
@@ -177,7 +177,7 @@ def snaphu():
     limitL = float(tmp[11])-float(tmp[12])*2.
     limitL = round(limitL, 1)
     std = round(float(tmp[12]), 1)  # FIXME: variable is never used
-    run('gmt makecpt -Cseis -I -Z -T'+'''"'''+str(limitL) +
+    makecpt('-Cseis -I -Z -T'+'''"'''+str(limitL) +
         '''"/"'''+str(limitU)+'''"/1 -D > unwrap.cpt''')
 
     if interp == 1:
@@ -188,9 +188,9 @@ def snaphu():
         boundR = (float(tmp1[2])-float(tmp1[1]))/4  # FIXME: Varibles are not used
         boundA = (float(tmp1[4])-float(tmp1[3]))/4
 
-    run('gmt grdimage unwrap.grd -Iunwrap_grad.grd -Cunwrap.cpt -JX6.5i -Bxaf+lRange -Byaf+lAzimuth -BWSen -X1.3i -Y3i -P -K > unwrap.ps')
-    run('''gmt psscale -Runwrap.grd -J -DJTC+w5/0.2+h+e -Cunwrap.cpt -Bxaf+l"Unwrapped phase" -By+lrad -O >> unwrap.ps''')
-    run('gmt psconvert -Tf -P -A -Z unwrap.ps')
+    grdimage('unwrap.grd -Iunwrap_grad.grd -Cunwrap.cpt -JX6.5i -Bxaf+lRange -Byaf+lAzimuth -BWSen -X1.3i -Y3i -P -K > unwrap.ps')
+    psscale('-Runwrap.grd -J -DJTC+w5/0.2+h+e -Cunwrap.cpt -Bxaf+l"Unwrapped phase" -By+lrad -O >> unwrap.ps''')
+    psconvert('-Tf -P -A -Z unwrap.ps')
 
     print(' ')
     print('SNAPHU: unwrapped phase map: unwrap.pdf ... ...')
@@ -198,17 +198,17 @@ def snaphu():
     print(' ')
     print('SNAPHU: clean up ... ...')
 
-    run('rm -f tmp.grd corr_tmp.grd unwrap.out tmp2.grd unwrap_grad.grd conncomp.out')
-    run('rm -f phase.in corr.in')
+    run(' -f tmp.grd corr_tmp.grd unwrap.out tmp2.grd unwrap_grad.grd conncomp.out')
+    run(' -f phase.in corr.in')
 
     if interp == 1:
-        run('rm -f phase_tmp.grd')
+        run(' -f phase_tmp.grd')
         file_shuttle('phase_patch.grd', 'phasefilt_interp.grd', 'mv')
 
     if n == 5:
         file_shuttle('corr_patch.grd', 'corr_cut.grd', 'mv')
-    run('rm -f mask_patch.grd mask3.grd mask3.out')
-    run('rm -f corr_cut.grd corr_patch.grd')
+    run(' -f mask_patch.grd mask3.grd mask3.out')
+    run(' -f corr_cut.grd corr_patch.grd')
 
     print("SNAPHU - END ... ...")
 

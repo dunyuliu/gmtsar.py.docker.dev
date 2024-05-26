@@ -39,22 +39,22 @@ def grd2kml():
                          stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
     print('GRD2KML: DPI is ', DPI)
 
-    run('gmt set COLOR_MODEL = hsv')
-    run('gmt set PS_MEDIA = A2')
+    gmtset('COLOR_MODEL = hsv')
+    gmtset('PS_MEDIA = A2')
 
     if n == 4:
-        run('gmt grdimage '+sys.argv[1]+'.grd -C'+sys.argv[2]+' ' +
+        grdimage(sys.argv[1]+'.grd -C'+sys.argv[2]+' ' +
             sys.argv[3]+' -Jx1id -P -Y2i -X2i -Q '+V+' > '+sys.argv[1]+'.ps')
     elif n == 3:
-        run('gmt grdimage '+sys.argv[1]+'.grd -C'+sys.argv[2] +
+        grdimage(sys.argv[1]+'.grd -C'+sys.argv[2] +
             ' -Jx1id -P -Y2i -X2i -Q '+V+' > '+sys.argv[1]+'.ps')
 
     print('GRD2KML: now make the kml and png ... ...')
     print('GRD2KML: make '+sys.argv[1]+'.kml and '+sys.argv[1]+'.png ... ...')
 
-    run('gmt psconvert '+sys.argv[1]+'.ps -W+k+t'+'''"''' +
+    psconvert(sys.argv[1]+'.ps -W+k+t'+'''"''' +
         sys.argv[1]+'''"'''+' -E'+DPI+' -TG -P '+VS+' -F'+sys.argv[1])
-    run('rm -f '+sys.argv[1]+'.ps grad.grd ps2raster* psconvert*')
+    run('rm -f '+sys.argv[1]+'.ps grad.grd ps2raster* psconvert*')  # FIXME replace with os.remove
 
     print("GRD2KML - END ... ...")
 

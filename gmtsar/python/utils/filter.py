@@ -31,16 +31,16 @@ def filter():
     Example: filter IMG-HH-ALPSRP055750660-H1.0__A.PRM IMG-HH-ALPSRP049040660-H1.0__A.PRM 300  2
 
     """
-    run("alias rm 'rm -f'")
-    run('gmt set IO_NC4_CHUNK_SIZE classic')
+    run("alias rm 'rm -f'")  # FIXME: update os.rm and remove
+    gmtset('IO_NC4_CHUNK_SIZE classic')
 
     print('set grdimage options')
 
     scale = '-JX6.5i'
     thresh = '5.e-21'
 
-    run('gmt set COLOR_MODEL = hsv')
-    run('gmt set PROJ_LENGTH_UNIT = inch')
+    gmtset('COLOR_MODEL = hsv')
+    gmtset('PROJ_LENGTH_UNIT = inch')
 
     n = len(sys.argv)
     arg = sys.argv[0:]
@@ -127,7 +127,7 @@ def filter():
         print('FILTER: jud, az_lks, dec_rng are ', jud, az_lks, dec_rng)
 
     print('FILTER: make the custom filter2 and set the decimation ... ...')
-    run('make_gaussian_filter ' +
+    make_gaussian_filter(
         sys.argv[1]+' '+str(dec_rng)+' '+str(az_lks)+' '+sys.argv[3]+' > ijdec')
     filter2 = 'gauss_'+sys.argv[3]
 
@@ -154,27 +154,27 @@ def filter():
     print(' ')
 
     print('FILTER: making amplitudes ... ...')
-    run('conv '+str(az_lks)+' '+str(dec_rng)+' ' +
+    conv(str(az_lks)+' '+str(dec_rng)+' ' +
         str(filter1)+' '+sys.argv[1]+' amp1_tmp.grd=bf')
-    run('conv '+str(idec)+' '+str(jdec)+' ' +
+    conv(str(idec)+' '+str(jdec)+' ' +
         str(filter2)+' amp1_tmp.grd=bf amp1.grd')
-    delete('amp1_tmp.grd')
+    delete('amp1_tmp.grd')  # FIXME: use os.remove or impliment in delete wrapper
 
-    run('conv '+str(az_lks)+' '+str(dec_rng)+' ' +
+    conv(str(az_lks)+' '+str(dec_rng)+' ' +
         str(filter1)+' '+sys.argv[2]+' amp2_tmp.grd=bf')
-    run('conv '+str(idec)+' '+str(jdec)+' ' +
+    conv(str(idec)+' '+str(jdec)+' ' +
         str(filter2)+' amp2_tmp.grd=bf amp2.grd')
-    delete('amp2_tmp.grd')
+    delete('amp2_tmp.grd')  # FIXME: see above
 
     print('FILTER: filter the real and imaginary parts of the interferogram ... ...')
     print('FILTER: filtering interferogram ... ...')
-    run('conv '+str(az_lks)+' '+str(dec_rng)+' ' +
+    conv(str(az_lks)+' '+str(dec_rng)+' ' +
         str(filter1)+' real.grd=bf real_tmp.grd=bf')
-    run('conv '+str(idec)+' '+str(jdec)+' ' +
+    conv(' '+str(idec)+' '+str(jdec)+' ' +
         str(filter2)+' real_tmp.grd=bf realfilt.grd')
-    run('conv '+str(az_lks)+' '+str(dec_rng)+' ' +
+    conv(' '+str(az_lks)+' '+str(dec_rng)+' ' +
         str(filter1)+' imag.grd=bf imag_tmp.grd=bf')
-    run('conv '+str(idec)+' '+str(jdec)+' ' +
+    conv(' '+str(idec)+' '+str(jdec)+' ' +
         str(filter2)+' imag_tmp.grd=bf imagfilt.grd')
 
     print(' ')
@@ -182,20 +182,20 @@ def filter():
 
     if compute_phase_gradient != 0:
         print('FILTER: filtering for phase gradient ... ...')
-        run('conv 1 1 '+str(filter4)+' real_tmp.grd xt.grd=bf')
-        run('conv 1 1 '+str(filter5)+' real_tmp.grd yt.grd=bf')
-        run('conv '+str(idec)+' '+str(jdec)+' ' +
+        conv(' 1 1 '+str(filter4)+' real_tmp.grd xt.grd=bf')
+        conv(' 1 1 '+str(filter5)+' real_tmp.grd yt.grd=bf')
+        conv(' '+str(idec)+' '+str(jdec)+' ' +
             str(filter2)+' xt.grd=bf xreal.grd')
-        run('conv '+str(idec)+' '+str(jdec)+' ' +
+        conv(' '+str(idec)+' '+str(jdec)+' ' +
             str(filter2)+' yt.grd=bf yreal.grd')
         delete('xt.grd')
         delete('yt.grd')
 
-        run('conv 1 1 '+str(filter4)+' imag_tmp.grd xt.grd=bf')
-        run('conv 1 1 '+str(filter5)+' imag_tmp.grd yt.grd=bf')
-        run('conv '+str(idec)+' '+str(jdec)+' ' +
+        conv(' 1 1 '+str(filter4)+' imag_tmp.grd xt.grd=bf')
+        conv(' 1 1 '+str(filter5)+' imag_tmp.grd yt.grd=bf')
+        conv(' '+str(idec)+' '+str(jdec)+' ' +
             str(filter2)+' xt.grd=bf ximag.grd')
-        run('conv '+str(idec)+' '+str(jdec)+' ' +
+        conv(' '+str(idec)+' '+str(jdec)+' ' +
             str(filter2)+' yt.grd=bf yimag.grd')
         delete('xt.grd')
         delete('yt.grd')
@@ -207,8 +207,8 @@ def filter():
     print('FILTER: form amplitude image ... ...')
     print('FILTER: making amplitude ... ...')
 
-    run('gmt grdmath realfilt.grd imagfilt.grd HYPOT = amp.grd')
-    run('gmt grdmath amp.grd 0.5 POW FLIPUD = display_amp.grd')
+    grdmath('realfilt.grd imagfilt.grd HYPOT = amp.grd')
+    grdmath('amp.grd 0.5 POW FLIPUD = display_amp.grd')
 
     output = subprocess.check_output(
         ['gmt', 'grdinfo', '-L2', 'display_amp.grd'])
@@ -220,62 +220,62 @@ def filter():
     print('FILTER: stdev is ', stdev)
     print('FILTER: AMAX is ', AMAX)
     print(' ')
-    run('gmt grd2cpt display_amp.grd -Z -D -L0/' +
+    grd2cpt('display_amp.grd -Z -D -L0/' +
         str(AMAX)+' -Cgray > display_amp.cpt')
     append_new_line('display_amp.cpt', 'N 255 255 254')
-    run('gmt grdimage display_amp.grd -Cdisplay_amp.cpt '+str(scale) +
+    grdimage('display_amp.grd -Cdisplay_amp.cpt '+str(scale) +
         ' -Bxaf+lRange -Byaf+lAzimuth -BWSen -X1.3i -Y3i -P -K > display_amp.ps')
-    run('''gmt psscale -Rdisplay_amp.grd -J -DJTC+w5i/0.2i+h+ef -Cdisplay_amp.cpt -Bx0+l"Amplitude (histogram equalized)" -O >> display_amp.ps''')
-    run('gmt psconvert -Tf -P -A -Z display_amp.ps')
+    psscale('-Rdisplay_amp.grd -J -DJTC+w5i/0.2i+h+ef -Cdisplay_amp.cpt -Bx0+l"Amplitude (histogram equalized)" -O >> display_amp.ps')
+    psconvert('-Tf -P -A -Z display_amp.ps')
 
     print(' ')
     print('FILTER: form the correlation ... ...')
     print('FILTER: making correction ... ...')
-    run('gmt grdmath amp1.grd amp2.grd MUL = tmp.grd')
-    run('gmt grdmath tmp.grd '+str(thresh)+' GE 0 NAN = mask.grd')
-    run('gmt grdmath amp.grd tmp.grd SQRT DIV mask.grd MUL FLIPUD = tmp2.grd=bf')
-    run('conv 1 1 '+str(filter3)+' tmp2.grd=bf corr.grd')
-    run("gmt makecpt -T0./.8/0.1 -Cgray -Z -N > corr.cpt")
+    grdmath('amp1.grd amp2.grd MUL = tmp.grd')
+    grdmath('tmp.grd '+str(thresh)+' GE 0 NAN = mask.grd')
+    grdmath('amp.grd tmp.grd SQRT DIV mask.grd MUL FLIPUD = tmp2.grd=bf')
+    conv(' 1 1 '+str(filter3)+' tmp2.grd=bf corr.grd')
+    makecpt('-T0./.8/0.1 -Cgray -Z -N > corr.cpt')
     append_new_line('corr.cpt', 'N 255 255 254')
-    run('gmt grdimage corr.grd '+str(scale) +
+    grdimage('corr.grd '+str(scale) +
         ' -Ccorr.cpt -Bxaf+lRange -Byaf+lAzimuth -BWSen -X1.3i -Y3i -P -K > corr.ps')
-    run("gmt psscale -Rcorr.grd -J -DJTC+w5i/0.2i+h+ef -Ccorr.cpt -Baf+lCorrelation -O >> corr.ps")
-    run('gmt psconvert -Tf -P -A -Z corr.ps')
+    psscale('-Rcorr.grd -J -DJTC+w5i/0.2i+h+ef -Ccorr.cpt -Baf+lCorrelation -O >> corr.ps')
+    psconvert('-Tf -P -A -Z corr.ps')
 
     print(' ')
     print('FILTER: form the phase ... ...')
-    run('gmt grdmath imagfilt.grd realfilt.grd ATAN2 mask.grd MUL FLIPUD = phase.grd')
-    run("gmt makecpt -Crainbow -T-3.15/3.15/0.1 -Z -N > phase.cpt")
-    run('gmt grdimage phase.grd '+str(scale) +
+    grdmath('imagfilt.grd realfilt.grd ATAN2 mask.grd MUL FLIPUD = phase.grd')
+    makecpt('-Crainbow -T-3.15/3.15/0.1 -Z -N > phase.cpt')
+    grdimage('phase.grd '+str(scale) +
         ' -Bxaf+lRange -Byaf+lAzimuth -BWSen -Cphase.cpt -X1.3i -Y3i -P -K > phase.ps')
-    run('''gmt psscale -Rphase.grd -J -DJTC+w5i/0.2i+h -Cphase.cpt -B1.57+l"Phase" -By+lrad -O >> phase.ps''')
-    run('gmt psconvert -Tf -P -A -Z phase.ps')
+    psscale('-Rphase.grd -J -DJTC+w5i/0.2i+h -Cphase.cpt -B1.57+l"Phase" -By+lrad -O >> phase.ps')
+    psconvert('-Tf -P -A -Z phase.ps')
 
     print(' ')
     print('FILTER: compute the solid earth tide (Commented so far) ')
 
     print(' ')
     print('FILTER: make the Werner/Goldstain filtered phase ... ...')
-    run('phasefilt -imag imagfilt.grd -real realfilt.grd -amp1 amp1.grd -amp2 amp2.grd -psize 32')
-    run('''gmt grdedit filtphase.grd `gmt grdinfo mask.grd -I- --FORMAT_FLOAT_OUT=%.12lg`''')
-    run('gmt grdmath filtphase.grd mask.grd MUL FLIPUD = phasefilt.grd')
+    phasefilt('-imag imagfilt.grd -real realfilt.grd -amp1 amp1.grd -amp2 amp2.grd -psize 32')
+    grdedit('filtphase.grd `gmt grdinfo mask.grd -I- --FORMAT_FLOAT_OUT=%.12lg`''')
+    grdmath('filtphase.grd mask.grd MUL FLIPUD = phasefilt.grd')
     delete('filtphase.grd')
-    run('gmt grdimage phasefilt.grd '+str(scale) +
+    grdimage('phasefilt.grd '+str(scale) +
         ' -Bxaf+lRange -Byaf+lAzimuth -BWSen -Cphase.cpt -X1.3i -Y3i -P -K > phasefilt.ps')
-    run('''gmt psscale -Rphasefilt.grd -J -DJTC+w5i/0.2i+h -Cphase.cpt -Bxa1.57+l"Phase" -By+lrad -O >> phasefilt.ps''')
-    run('gmt psconvert -Tf -P -A -Z phasefilt.ps')
+    psscale('-Rphasefilt.grd -J -DJTC+w5i/0.2i+h -Cphase.cpt -Bxa1.57+l"Phase" -By+lrad -O >> phasefilt.ps')
+    psconvert('-Tf -P -A -Z phasefilt.ps')
 
     print(' ')
     print('FILTER: form the phase gradients ... ...')
 
     if compute_phase_gradient != 0:
         print('FILTER: making phase gradient ... ...')
-        run('gmt grdmath amp.grd 2. POW = amp_pow.grd')
-        run('gmt grdmath realfilt.grd ximag.grd MUL imagfilt.grd xreal.grd MUL SUB amp_pow.grd DIV mask.grd MUL FLIPUD = xphase.grd')
-        run('gmt grdmath realfilt.grd yimag.grd MUL imagfilt.grd yreal.grd MUL SUB amp_pow.grd DIV mask.grd MUL FLIPUD = yphase.grd')
+        grdmath('amp.grd 2. POW = amp_pow.grd')
+        grdmath('realfilt.grd ximag.grd MUL imagfilt.grd xreal.grd MUL SUB amp_pow.grd DIV mask.grd MUL FLIPUD = xphase.grd')
+        grdmath('realfilt.grd yimag.grd MUL imagfilt.grd yreal.grd MUL SUB amp_pow.grd DIV mask.grd MUL FLIPUD = yphase.grd')
 
     file_shuttle('mask.grd', 'tmp.grd', 'mv')
-    run('gmt grdmath tmp.grd FLIPUD = mask.grd')
+    grdmath('tmp.grd FLIPUD = mask.grd')
 
     print(' ')
     print('FILTER: delete files ... ...')
