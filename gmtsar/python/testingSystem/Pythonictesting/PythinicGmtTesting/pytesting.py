@@ -34,22 +34,9 @@ def compare_nc_files(fn1,fn2,threshold=1e-3):
     for var in f1.variables:
         var1 = f1[var]
         var2 = f2[var]
-        if var1.dims != var2.dims:
-            isTheSame = 'FAIL var dim '+fn1+' '+fn2
-        if not np.allclose(var1,var2,rtol=threshold, atol=threshold):
-            isTheSame = 'FAIL var numbers '+fn1+' '+fn2
-
-    if not metadata_equal:# and data_equal:
-        isTheSame = 'FAIL metadata '+fn1+' '+fn2
-
-    try:
-        xr.testing.assert_allclose(f1,f2)
-        print('SUCCESS by xarray.testing.assert_allclose')
-        print('SUCCESS '+fn1 +' '+fn2)
-    except AssertionError as e:
-        print(e)
-    print(isTheSame)
-
+        assert var1.dims == var2.dims, 'FAIL var dim '+fn1+' '+fn2
+    assert metadata_equal, 'FAIL metadata '+fn1+' '+fn2
+    xr.testing.assert_allclose(f1,f2)
     return isTheSame
 
 def compare_txt_files(fn1,fn2,threshold=1e-3):
@@ -57,13 +44,10 @@ def compare_txt_files(fn1,fn2,threshold=1e-3):
     with open(fn1,'r') as f1, open(fn2,'r') as f2:
         result1 = f1.read().split()
         result2 = f2.read().split()
-    if len(result1) != len(result2):
-        isTheSame = 'FAIL '+fn1+' '+fn2
-
+    assert len(result1) == len(result2), 'FAIL '+fn1+' '+fn2
     for num1,num2 in zip(result1,result2):
         fnum1, fnum2 = float(num1),float(num2)
-        if abs(fnum1-fnum2) > threshold:
-            isTheSame = 'FAIL '+fn1+' '+fn2
+        assert abs(fnum1-fnum2) < threshold, 'FAIL '+fn1+' '+fn2
     print(isTheSame)
 
 def compare_files(fnNew, fnRef, fileName, fileType):
@@ -73,15 +57,10 @@ def compare_files(fnNew, fnRef, fileName, fileType):
     if fileType=='png':
         imageNew = io.imread(fnNew)
         imageRef = io.imread(fnRef)
-        #assert imageNew.shape == imageRef.shape, 'Images must be the same shape.'
-        try:
-            ssim_index = ssim(imageNew,imageRef,multichannel=True)
-            if ssim_index>imageSimilarityIndexThreshold:
-                print(isTheSame+' '+f'SSIM: {ssim_index}')
-            else:
-                print(notTheSame+' '+f'SSIM: {ssim_index}')
-        except:
-            print(notTheSame+' no SSIM')
+        # assert imageNew.shape == imageRef.shape, 'Images must be the same shape.'
+        ssim_index = ssim(imageNew,imageRef,multichannel=True)
+        assert ssim_index > imageSimilarityIndexThreshold, f'{notTheSame} SSM: {ssim_index}'
+        print(notTheSame+' no SSIM')
 
         if imageNew.shape != imageRef.shape:
             print(notTheSame+' image shapes do not match')
@@ -93,7 +72,10 @@ def compare_files(fnNew, fnRef, fileName, fileType):
         rms = parseCmdOutput('gmt.log.txt', 'rms:')
         #print('Python and csh '+fileName+' "s difference are')
         #print('mean = ',mean, ' stddev = ', stdev, 'rms = ', rms)
-        if (rms<fileDiffNumericThreshold and not('phase' in fnNew)) or \
+        assert 'phase' in fnNew, f'{notTheSame} diff.grd mean={mean} stdev={stdev} rms={rms}'
+        assert rms >= fileDiffNumericThreshold, f'{notTheSame} diff.grd mean={mean} stdev={stdev} rms={rms}'
+        assert rms >= 0.1, f'{notTheSame} diff.grd mean={mean} stdev={stdev} rms={rms}'
+        if (rms<fileDiffNumericThreshold and not ('phase' in fnNew)) or \
                 (rms<0.1 and ('phase' in fnNew)):
             print(isTheSame+'; diff.grd mean='+str(mean)+' stdev='+str(stdev)+' rms='+str(rms))
         else:
@@ -107,10 +89,8 @@ def findErrorsInLogFiles(rootDir):
             if file=='log.txt':
                 with open(os.path.join(root,file),'r') as f:
                     contents = f.read()
-                    if any(errKeyWord in contents for errKeyWord in errKeyWordList):
-                        print('Error found in ', os.path.join(root,file))
-                    else:
-                        print('No Error found in ', os.path.join(root,file))
+                    assert not any(errKeyWord in contents for errKeyWord in errKeyWordList), \
+                        f'Error found in {os.path.join(root,file)}'
 
 for caseName in caseNameList:
     print(' ')
