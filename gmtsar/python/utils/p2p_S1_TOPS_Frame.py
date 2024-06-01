@@ -13,6 +13,7 @@ from gmtsar_lib import *
 
 
 
+
 def getFilenameWithPolXml(searchDir, searchStr1, pol, fileFormat):
     fileList = os.listdir(searchDir+'/annotation')
     for fileName in fileList:
@@ -79,37 +80,6 @@ def processOneSubswath(subswathId, fm, fs):
     os.system('pwd')
 
 
-def merge(skip_master, fmList, fsList):
-    if skip_master != 2:
-        run('mkdir -p merge')  # FIXME: Use os.mkdir
-        os.chdir('merge')
-        file_shuttle('../topo/dem.grd', '.', 'link')
-        file_shuttle('../config.py', '.', 'cp')
-        run("ln -s ../F1/intf/*/gauss* .")  # FIXME: find os command for this
-        if check_file_report('tmp.filelist') is True:
-            delete('tmp.filelist')
-
-        pth = [getPathPrmFileName(subswathId=0),
-               getPathPrmFileName(subswathId=1),
-               getPathPrmFileName(subswathId=2)]
-        prm1m = [shortenPrmFileName(fmList[0]),
-                 shortenPrmFileName(fmList[1]),
-                 shortenPrmFileName(fmList[2])]
-        prm1s = [shortenPrmFileName(fsList[0]),
-                 shortenPrmFileName(fsList[1]),
-                 shortenPrmFileName(fsList[2])]
-
-        with open('tmp.filelist', 'w') as f:
-            for i in range(3):
-                f.write(pth[i]+'/:'+prm1m[i]+':'+prm1s[i]+'\n')
-
-        sys.path.insert(0, os.getcwd())
-        from config import correct_iono, iono_filt_rng, iono_filt_azi, det_stitch # FIXME: Could use configparser to handle this
-        mergeUnwrapGeocodeTops(correct_iono, det_stitch)
-    else:
-        print('P2P_S1_TOPS_FRAME: No radar product is produced as only master image is processed.')
-
-
 def getPathPrmFileName(subswathId):
     intfDir = '../F'+str(subswathId+1)+'/intf'
     return glob.glob(intfDir+'/*')[0]
@@ -142,6 +112,40 @@ def p2pS1TopsFrame():
        2017. Tectonic and Anthropogenic Deformation at the Cerro Prieto Geothermal ')
        Step-Over Revealed by Sentinel-1A InSAR. IEEE Transactions on Geoscience and Remote Sensing.')
     """
+    config = init_config()  # FIXME: Figure out where these variables are and which satelite they are for
+    correct_iono = config['make_filter_intfs']['correct_iono']
+    det_stitch = config['S1_TOPS']['det_stitch']
+    iono_filt_rng = config['iono_filt_rng']
+    iono_filt_azi = config['iono_filt_azi']
+
+    def merge(skip_master, fmList, fsList):
+        if skip_master != 2:
+            run('mkdir -p merge')  # FIXME: Use os.mkdir
+            os.chdir('merge')
+            file_shuttle('../topo/dem.grd', '.', 'link')
+            file_shuttle('../config.py', '.', 'cp')
+            run("ln -s ../F1/intf/*/gauss* .")  # FIXME: find os command for this
+            if check_file_report('tmp.filelist') is True:
+                delete('tmp.filelist')
+
+            pth = [getPathPrmFileName(subswathId=0),
+                getPathPrmFileName(subswathId=1),
+                getPathPrmFileName(subswathId=2)]
+            prm1m = [shortenPrmFileName(fmList[0]),
+                    shortenPrmFileName(fmList[1]),
+                    shortenPrmFileName(fmList[2])]
+            prm1s = [shortenPrmFileName(fsList[0]),
+                    shortenPrmFileName(fsList[1]),
+                    shortenPrmFileName(fsList[2])]
+
+            with open('tmp.filelist', 'w') as f:
+                for i in range(3):
+                    f.write(pth[i]+'/:'+prm1m[i]+':'+prm1s[i]+'\n')
+
+            sys.path.insert(0, os.getcwd())
+            mergeUnwrapGeocodeTops(correct_iono, det_stitch)
+        else:
+            print('P2P_S1_TOPS_FRAME: No radar product is produced as only master image is processed.')
     print('P2P_S1_TOPS_FRAME - START')
 
     numOfArg = len(sys.argv)
@@ -158,14 +162,6 @@ def p2pS1TopsFrame():
     pol = sys.argv[6]
     seq = int(sys.argv[7])
 
-    if check_file_report('config.py') is True:
-        # FIXME: Also, if this is handled with configparser, this check can be added to __init__.py and outcome handled there
-        print('P2P_S1_TOPS_FRAME: config.py is provided; loading it.')
-    else:
-        print('P2P_S1_TOPS_FRAME: generating config.py')
-        run('pop_config.py S1_TOPS')  # FIXME: Python script call
-    if sys.argv[5] != 'config.py':
-        sys.exit('P2P_S1_TOPS_FRAME: ERROR: config.py is missing, exiting')
 
     fmList = [getFilenameWithPolXml('raw/'+masterSafe, 'iw1', pol, '.xml'),
               getFilenameWithPolXml('raw/'+masterSafe, 'iw2', pol, '.xml'),

@@ -106,15 +106,6 @@ def P2P1Preprocess(SAT, master, aligned, skip_master, cmdAppendix):
     print('P2P 1: PREPROCESS - END')
 
 
-# FIXME: overloading function from gmtsarlib.
-#Consiter using libriary such as multipledispatch to declare overloads. (This would also allow you to define all overloads in one place)
-def renameMasterAlignedForS1tops(master0, aligned0):
-    print('Renaming master and aligned for SAT==S1_TOPS')
-    master = 'S1_'+master0[15:15+8]+'_'+master0[24:24+6]+'_F'+master0[6:7]
-    aligned = 'S1_'+aligned0[15:15+8]+'_'+aligned0[24:24+6]+'_F'+aligned0[6:7]
-    return master, aligned
-
-
 # FIXME: SAT is never used in this function.
 def P2P2Clean(SAT, master, aligned, skip_master, iono):
 
@@ -482,6 +473,8 @@ def P2P2FocusAlign(SAT, master, aligned, skip_master, iono):
 
 
 def P2P2RegionCut(master, aligned, skip_master, iono):
+    config = init_config()  # TODO: Centralize to avoid number of I/O operations
+    region_cut = config['SLC_ALIGN']['region_cut']
     print("P2P 2: region_cut !=-999 ")
     print("P2P 2: cutting SLC image to " + str(region_cut))
     if skip_master == 0 or skip_master == 2:
@@ -544,7 +537,7 @@ def P2P3MakeTopo(master, aligned, topo_phase, topo_interp_mode, shift_topo):
             else:
                 run("dem2topo_ra.py master.PRM dem.grd")
         else:
-            print("no DEM file found: ", dem.grd)
+            print("no DEM file found: dem.grd")
             sys.exit(1)
 
         print('P2P 3: exiting directory topo/')
@@ -598,7 +591,13 @@ def switchMasterAligned(switch_master, master, aligned):
 
 def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, azimuth_dec,
                                  dec, filt, compute_phase_gradient, iono, iono_dsamp):  # FIXME: use variable name other than 'filter' as it is a reserved keyword.
-
+    config = init_config()  # TODO: Centralize to avoid number of I/O operations
+    iono_skip_est = config['make_filter_intfs']['iono_skip_est']
+    mask_water = config['mask_water']
+    # switch_land = config
+    iono_filt_rng = config['make_filter_intfs']['iono_filt_rng']
+    switch_land = -999  # FIXME: This should be in the config file
+    iono_filt_azi = config['make_filter_intfs']['iono_filt_azi']
     print('P2P 4: start from make and filter interferograms')
     run('mkdir -p intf')  # FIXME: use os
     run('cleanup.py intf')
@@ -683,8 +682,8 @@ def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, az
 
         file_shuttle('phase.grd', 'phasefilt.grd', 'cp')
 
-        if iono_skip_est == 0:
-            if mask_water == 1 or switch_land == 1:
+        if iono_skip_est == 0: # FIXME: Switch land is not in the config file, should this be switch_master?
+            if mask_water == 1 or switch_land == 1: 
                 output = subprocess.check_output(
                     'gmt grdinfo phase.grd -I-', shell=True)
                 rcut = output[2:20].decode('utf-8')
@@ -848,6 +847,8 @@ def getIntfSubDirName(ref, rep):
 
 
 def P2P5Unwrap(ref, rep, threshold_snaphu, mask_water, switch_land, near_interp):
+    config = init_config()  # TODO: Centralize to avoid number of I/O operations
+    defomax = config['unwrapping']['defomax']
     if threshold_snaphu != 0:
         print('P2P 5: threshold_snaphu != 0')
         print('P2P 5: entering intf/')
@@ -859,7 +860,7 @@ def P2P5Unwrap(ref, rep, threshold_snaphu, mask_water, switch_land, near_interp)
         if mask_water == 1 or switch_land == 1:
             r_cut = "gmt grdinfo phase.grd -I- | cut -c3-20"
             os.chdir("../../topo")
-            if check_file_report(landmask_ra.grd) is False:
+            if check_file_report('landmask_ra.grd') is False:  # FIXME: This is not defined - should be a string?
                 run("landmask.py " + r_cut)  # FIXME: use imports
             os.chdir("../intf")
             os.chdir(intfSubDirName)
@@ -923,7 +924,7 @@ def p2p_processing(debug):
     # check the number of arguments
     n = len(sys.argv)
     # If using p2p_processing A B C D, then a total of 5 input parameters are expected.
-
+    SAT = sys.argv[1]
     if n != 4 and n != 5:
         print(p2p_processing.__doc__)
         sys.exit('ERROR: the number of arguments is not correct.')
@@ -944,19 +945,47 @@ def p2p_processing(debug):
         run('pop_config.py ' + SAT)
 
     print('P2P 0: read in parameters from the config.py ... ...')
+    # TODO: Find a better way of doing this
     sys.path.insert(0, os.getcwd())
-    import config  # FIXME: This code will fail if config is not defined. Rework to avoid this. Also, avoid imports during function calls.
-    # possibly define a class to store all the configuration parameters and import that class at the beginning of the script.
-    # It might also be possible to have this functionality from the configparer module. Read up on this
-    from config import proc_stage, skip_stage, skip_master, \
-        skip_1, skip_2, skip_3, skip_4, skip_5, skip_6, \
-        num_patches, earth_radius, near_range, fd1, region_cut, \
-        topo_phase, topo_interp_mode, shift_topo, switch_master, \
-        filter_wavelength, dec_factor, compute_phase_gradient, \
-        correct_iono, iono_filt_rng, iono_filt_azi, \
-        iono_dsamp, iono_skip_est, threshold_snaphu, \
-        near_interp, mask_water, defomax, threshold_geocode
-
+    config = init_config()
+    proc_stage = config['processing_stage']['proc_stage']
+    skip_stage = config['processing_stage']['skip_stage']
+    skip_master = config['processing_stage']['skip_master']
+    skip_1 = config['processing_stage']['skip_1']
+    skip_2 = config['processing_stage']['skip_2']
+    skip_3 = config['processing_stage']['skip_3']
+    skip_4 = config['processing_stage']['skip_4']
+    skip_5 = config['processing_stage']['skip_5']
+    skip_6 = config['processing_stage']['skip_6']
+    num_patches = config['processing_stage']['num_patches']
+    earth_radius = config['processing_stage']['earth_radius']
+    near_range = config['preprocess']['near_range']
+    fd1 = config['preprocess']['fd1']
+    region_cut = config['SLC_ALIGN']['region_cut']
+    topo_phase = config['make_topo_ra']['topo_phase']
+    topo_interp_mode = config['make_topo_ra']['topo_interp_mode']
+    shift_topo = config['make_topo_ra'][SAT]['shift_topo']  # FIXME: Figure out what SAT is
+    switch_master = config['make_filter_intfs']['switch_master']
+    filter_wavelength = config['make_filter_intfs'][SAT]['filter_wavelength']
+    dec_factor = config['make_filter_intfs'][SAT]['dec_factor']
+    compute_phase_gradient = config['make_filter_intfs']['compute_phase_gradient']
+    correct_iono = config['make_filter_intfs']['correct_iono']
+    iono_filt_rng = config['make_filter_intfs']['iono_filt_rng']
+    iono_filt_azi = config['make_filter_intfs']['iono_filt_azi']
+    iono_dsamp = config['make_filter_intfs']['iono_dsamp']
+    iono_skip_est = config['make_filter_intfs']['iono_skip_est']
+    threshold_snaphu = config['unwrapping']['threshold_snaphu']
+    near_interp = config['unwrapping']['near_interp']
+    mask_water = config['unwrapping']['mask_water']
+    defomax = config['unwrapping']['defomax']
+    threshold_geocode = config['geocode']['threshold_geocode']
+    spec_div = config['ERS_processing']['S1_TOPS']['spec_div']
+    spec_mode = config['ERS_processing']['S1_TOPS']['spec_mode']
+    # FIXME: switch_land is not defined in the config file, should this be added?
+    switch_land = -999
+    range_dec = config['make_filter_intfs'][SAT]['range_dec']  # TODO: Set SAT to a specific value
+    azimuth_dec = config['make_filter_intfs'][SAT]['azimuth_dec']
+    SLC_factor = -999 # FIXME: This is not defined under S1_TOPS, should this be added?
     print('P2P 0: proc_stage   =', proc_stage)  # NOTE: if these are defined in a class, class can have a function to export all values to logging module
     print('P2P 0: skip_stage   =', skip_stage)
     print('P2P 0: skip_master  =', skip_master)
@@ -1011,43 +1040,6 @@ def p2p_processing(debug):
     master = sys.argv[2]
     aligned = sys.argv[3]
 
-    # NOTE: this could be incorporated into config class, so that it is not necessary to import each variable individually.
-    # This could also be done with a loop and a dictionary storing all the default values.
-    # spec_div could be missing.
-    if 'spec_div' in dir(config):
-        from config import spec_div
-    else:
-        spec_div = 0
-
-    # spec_mode could be missing.
-    if 'spec_mode' in dir(config):
-        from config import spec_mode
-    else:
-        spec_mode = -999
-
-    # switch_land could be missing
-    if 'switch_land' in dir(config):
-        from config import switch_land
-    else:
-        switch_land = -999
-    print('P2P 0: switch_land =', switch_land)
-
-    # range_dec could be missing
-    if 'range_dec' in dir(config):
-        from config import range_dec
-    else:
-        range_dec = -999
-
-    # azimuth_dec could be missing
-    if 'azimuth_dec' in dir(config):
-        from config import azimuth_dec
-    else:
-        azimuth_dec = -999
-
-    if 'SLC_factor' in dir(config):
-        from config import SLC_factor
-    else:
-        SLC_factor = -999
     print('P2P 0: non-conventional configuration parameters are loaded ... ...')
     print('P2P 0: spec_div    =', spec_div)
     print('P2P 0: spec_mode   =', spec_mode)

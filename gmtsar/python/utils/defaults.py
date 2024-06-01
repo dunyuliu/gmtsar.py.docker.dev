@@ -1,3 +1,14 @@
+"""
+This file stores the default values for the configuration file, in both
+a string format which includes comments for readability, and a dictionary
+format which can be used to write the configuration file in YAML format.
+
+adapted from config files in the orginal GMTSAR code,
+based on the version by Dunyu Liu
+Martin Hawks 01/06/2024
+"""
+
+DEFAULT_COMENTED_CONFIG = """
 #
 # This is the default configuration file for p2p_processing
 #
@@ -156,85 +167,61 @@ make_filter_intfs:
 
   ALOS2_SCAN:
     filter_wavelength: 400
-
-  RS2:
-    filter_wavelength: 100
-
-  TSX:
-    filter_wavelength: 100
-
-  CSK_RAW:
-    filter_wavelength: 200
-
-  CSK_SLC:
-    filter_wavelength: 200
-
-  S1_TOPS:
-    filter_wavelength: 200
-
-  S1_STRIP:
-    filter_wavelength: 200
-
-  ERS:
-    filter_wavelength: 200
-
-  ENVI:
-    filter_wavelength: 200
-
-  ALOS:
-    filter_wavelength: 200
-
-  ALOS_SLC:
-    filter_wavelength: 200
-
-  ALOS2:
-    filter_wavelength: 200
-
-# decimation of images
-# decimation control the size of the amplitude and phase images. It is either 1 or 2.
-# Set the decimation to be 1 if you want higher resolution images.
-# Set the decimation to be 2 if you want images with smaller file size.
-#
-
-  RS2:
-    dec_factor: 1
-
-  TSX:
-    dec_factor: 1
-
-  ALOS2_SCAN:
     dec_factor: 4
     range_dec: 4
     azimuth_dec: 8
 
+  RS2:
+    filter_wavelength: 100
+    dec_factor: 1
+
+  TSX:
+    filter_wavelength: 100
+    dec_factor: 1
+
   CSK_RAW:
+    filter_wavelength: 200
     dec_factor: 2
 
   CSK_SLC:
+    filter_wavelength: 200
     dec_factor: 2
 
   S1_TOPS:
+    filter_wavelength: 200
     dec_factor: 2
     range_dec: 8
     azimuth_dec: 2
 
   S1_STRIP:
+    filter_wavelength: 200
     dec_factor: 2
 
   ERS:
+    filter_wavelength: 200
     dec_factor: 2
 
   ENVI:
+    filter_wavelength: 200
     dec_factor: 2
 
   ALOS:
+    filter_wavelength: 20
     dec_factor: 2
 
   ALOS_SLC:
+    filter_wavelength: 200
     dec_factor: 2
 
   ALOS2:
+    filter_wavelength: 200
     dec_factor: 2
+
+# decimation of images is controlled by the dec_factor parameter.
+# decimation control the size of the amplitude and phase images. It is either 1 or 2.
+# Set the decimation to be 1 if you want higher resolution images.
+# Set the decimation to be 2 if you want images with smaller file size.
+#
 
 
 #
@@ -291,3 +278,46 @@ S1_TOPS:
 
 ALOS2_SCAN:
   det_stitch: 0
+"""
+DEFAULT_CONFIG = {
+    'processing_stage': {'proc_stage': 1, 'skip_stage': -999, 'skip_1': 0, 'skip_2': 0,
+                         'skip_3': 0, 'skip_4': 0, 'skip_5': 0, 'skip_6': 0, 'skip_master': 0},
+    'preprocess': {'num_patches': -999, 'earth_radius': -999, 'near_range': -999, 'fd1': -999},
+    'ERS_processing': {'S1_TOPS': {'spec_div': 0, 'spec_mode': 0},
+                       'ALOS_SLC': {'SLC_factor': 0.02},
+                       'ALOS2': {'SLC_factor': 2.0},
+                       'ALOS2_SCAN': {'SLC_factor': 2.0}
+                       },
+    'SLC_align': {'region_cut': -999},
+    'make_topo_ra': {'topo_phase': 1, 'topo_interp_mode': 0,
+                     'ALOS_SLC': {'shift_topo': 1},
+                     'ALOS': {'shift_topo': 1},
+                     'ERS': {'shift_topo': 1},
+                     'ALOS2': {'shift_topo': 0},
+                     'ALOS2_SCAN': {'shift_topo': 0},
+                     'S1_STRIP': {'shift_topo': 0},
+                     'S1_TOPS': {'shift_topo': 0},
+                     'CSK_RAW': {'shift_topo': 0},
+                     'CSK_SLC': {'shift_topo': 0},
+                     'TSX': {'shift_topo': 0},
+                     'RS2': {'shift_topo': 0}},
+    'make_filter_intfs': {'switch_master': 0,
+                          'ALOS2_SCAN': {'filter_wavelength': 400, 'dec_factor': 4, 'range_dec': 4, 'azimuth_dec': 8},
+                          'RS2': {'filter_wavelength': 100, 'dec_factor': 1},
+                          'TSX': {'filter_wavelength': 100, 'dec_factor': 1},
+                          'CSK_RAW': {'filter_wavelength': 200, 'dec_factor': 2},
+                          'CSK_SLC': {'filter_wavelength': 200, 'dec_factor': 2},
+                          'S1_TOPS': {'filter_wavelength': 200, 'dec_factor': 2, 'range_dec': 8, 'azimuth_dec': 2},
+                          'S1_STRIP': {'filter_wavelength': 200, 'dec_factor': 2},
+                          'ERS': {'filter_wavelength': 200, 'dec_factor': 2},
+                          'ENVI': {'filter_wavelength': 200, 'dec_factor': 2},
+                          'ALOS': {'filter_wavelength': 20, 'dec_factor': 2},
+                          'ALOS_SLC': {'filter_wavelength': 200, 'dec_factor': 2},
+                          'ALOS2': {'filter_wavelength': 200, 'dec_factor': 2},
+                          'compute_phase_gradient': 0, 'correct_iono': 0, 'iono_filt_rng': 1.0,
+                          'iono_filt_azi': 1.0, 'iono_dsamp': 1, 'iono_skip_est': 1},
+    'unwrapping': {'threshold_snaphu': 0, 'near_interp': 0, 'mask_water': 1, 'defomax': 0},
+    'geocode': {'threshold_geocode': 0.1},
+    'S1_TOPS': {'det_stitch': 0},
+    'ALOS2_SCAN': {'det_stitch': 0}
+}

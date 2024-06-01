@@ -1,3 +1,4 @@
+
 #
 # This is the default configuration file for p2p_processing
 #
@@ -156,85 +157,61 @@ make_filter_intfs:
 
   ALOS2_SCAN:
     filter_wavelength: 400
-
-  RS2:
-    filter_wavelength: 100
-
-  TSX:
-    filter_wavelength: 100
-
-  CSK_RAW:
-    filter_wavelength: 200
-
-  CSK_SLC:
-    filter_wavelength: 200
-
-  S1_TOPS:
-    filter_wavelength: 200
-
-  S1_STRIP:
-    filter_wavelength: 200
-
-  ERS:
-    filter_wavelength: 200
-
-  ENVI:
-    filter_wavelength: 200
-
-  ALOS:
-    filter_wavelength: 200
-
-  ALOS_SLC:
-    filter_wavelength: 200
-
-  ALOS2:
-    filter_wavelength: 200
-
-# decimation of images
-# decimation control the size of the amplitude and phase images. It is either 1 or 2.
-# Set the decimation to be 1 if you want higher resolution images.
-# Set the decimation to be 2 if you want images with smaller file size.
-#
-
-  RS2:
-    dec_factor: 1
-
-  TSX:
-    dec_factor: 1
-
-  ALOS2_SCAN:
     dec_factor: 4
     range_dec: 4
     azimuth_dec: 8
 
+  RS2:
+    filter_wavelength: 100
+    dec_factor: 1
+
+  TSX:
+    filter_wavelength: 100
+    dec_factor: 1
+
   CSK_RAW:
+    filter_wavelength: 200
     dec_factor: 2
 
   CSK_SLC:
+    filter_wavelength: 200
     dec_factor: 2
 
   S1_TOPS:
+    filter_wavelength: 200
     dec_factor: 2
     range_dec: 8
     azimuth_dec: 2
 
   S1_STRIP:
+    filter_wavelength: 200
     dec_factor: 2
 
   ERS:
+    filter_wavelength: 200
     dec_factor: 2
 
   ENVI:
+    filter_wavelength: 200
     dec_factor: 2
 
   ALOS:
+    filter_wavelength: 20
     dec_factor: 2
 
   ALOS_SLC:
+    filter_wavelength: 200
     dec_factor: 2
 
   ALOS2:
+    filter_wavelength: 200
     dec_factor: 2
+
+# decimation of images is controlled by the dec_factor parameter.
+# decimation control the size of the amplitude and phase images. It is either 1 or 2.
+# Set the decimation to be 1 if you want higher resolution images.
+# Set the decimation to be 2 if you want images with smaller file size.
+#
 
 
 #

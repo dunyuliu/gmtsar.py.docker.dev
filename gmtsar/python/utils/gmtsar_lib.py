@@ -14,7 +14,17 @@ import os
 import re
 import subprocess
 import shutil
+from make_config import write_commented_config, read_config
 
+def init_config():
+    """
+    Initialize the config file.
+    """
+    if not os.path.exists('config.yaml'):
+        write_commented_config('config.yaml')
+        print('config.yaml is generated')
+    config = read_config('config.yaml')
+    return config
 
 def check_file_report(fn):
     """
