@@ -13,6 +13,7 @@ file_shuttle
 import os
 import re
 import subprocess
+import shutil
 
 
 def check_file_report(fn):
@@ -75,13 +76,17 @@ def grep_value(fn, s, i):
     return intFloatOrString(val)
 
 
-def replace_strings(fn, s0, s1):  # FIXME: I think re.sub does this already
+def replace_strings(fn, s0, s1):  # FIXME: I think re.sub does this already. Is there a reason it is not in use?
     """
-    replace_strings will replace str s0 in file fn0,
-    with the string s1, and update fn0.
+    replace_strings will replace str s0 in file fn,
+    with the string s1, and update fn.
     """
     with open(f"{fn}") as f:
         lines = f.readlines()
+        txt = f.read()
+    fixed = re.sub(s0, s1, txt)
+    with open(fn, 'w') as f:
+        f.write(fixed)
 
     updated_lines = []
     for line in lines:
@@ -120,11 +125,12 @@ def file_shuttle(fn0, fn1, opt):
         os.system("ln -sf " + fn0 + " " + fn1)
 
 
-def delete(fn):  # FIXME: os.remove(fn) is the same
+def delete(fn):  # FIXME: Identify what file types this is being called on and use more specific rm functions
     """
-    delete file named fn.
+    delete file named fn. Currently supports only directory trees,
+    find usages and fix to be filetype specific
     """
-    os.system("rm -rf "+fn)
+    shutil.rmtree(fn)
 
 def assign_arg(arg: list, txt):
     """
@@ -133,10 +139,9 @@ def assign_arg(arg: list, txt):
     return the value next to it in arg.
     """
     if txt in arg:
-        val = arg[arg.index(txt)+1]  # FIXME: better to one loop to find the first occurrence of str
+        val = arg[arg.index(txt)+1]
         return intFloatOrString(val)
-    else:
-        return 0
+    return 0
 
 def run(cmd):
     """
@@ -330,7 +335,8 @@ def offset_topo(cmd_str):
 
 def estimate_ionosphereic_phase_csh(cmd_str):
     """
-    estimate_ionosphereic_phase_csh is a wrapper for the gmtsar estimate_ionosphereic_phase.csh command
+    estimate_ionosphereic_phase_csh is a wrapper for the gmtsar
+    estimate_ionosphereic_phase.csh command
     script, which has yet to be implimented in python.
     """
     os.system(f"estimate_ionosphereic_phase.csh {cmd_str}")
