@@ -1,6 +1,0 @@
-INFO:__main__:This is the main logger
-DEBUG:__main__:This is the main logger debug
-CRITICAL:__main__:This is the main logger critical
-INFO:dependency:This is the foo function
-ERROR:dependency:This is the bar function
-WARNING:dependency:This is the baz function

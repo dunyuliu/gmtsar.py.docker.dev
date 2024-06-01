@@ -3,7 +3,7 @@ import os, time
 from pathListForTest import caseNameList, intfDirList, rawDir, \
     SLCDir, workAbsoluteDir, pythonCommandListPath
 
-def run_one(caseName):
+for caseName in caseNameList:
     startTime = time.time()
     os.chdir(workAbsoluteDir+caseName)
     os.system('pwd')
@@ -14,9 +14,5 @@ def run_one(caseName):
     with open('timeSpentLog.txt', 'a') as f:
         f.write(caseName+' used '+str(elapsedTime)+' s \n')
 
-if __name__ == '__main__':
-    caseNameList = caseNameList[7:]  # FIXME: remove later
-    for caseName in caseNameList:
-        run_one(caseName)
-    os.chdir(workAbsoluteDir)
-    os.system('python checkTest.py')
+os.chdir(workAbsoluteDir)
+os.system('python checkTest.py')

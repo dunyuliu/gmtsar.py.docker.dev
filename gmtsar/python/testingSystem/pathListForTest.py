@@ -1,8 +1,6 @@
 #! /usr/bin/env python3
 
-from pathlib import Path
-
-workAbsoluteDir = Path('py.test').resolve().as_posix() + '/'
+workAbsoluteDir = '/scratch/gmtsar.py.dev/py.test/'
 pythonCommandListPath = workAbsoluteDir+'pythonREADME/'
 
 rawDir = 'raw'
@@ -16,6 +14,8 @@ intfDirList = {
                 'ALOS_ERSDAC_L1.0' : ['intf/2010141_2010187'],
                 'S1A_SLC_TOPS_LA' : ['F1/intf/2015145_2015157', 'F2/intf/2015145_2015157', 
                                       'F3/intf/2015145_2015157', 'merge'],
+                'S1A_SLC_TOPS_Greece' : ['F1/intf/2015308_2015320', 'F2/intf/2015308_2015320',
+                                        'F3/intf/2015308_2015320','merge'],
                 'ALOS_SLC_L1.1' : ['intf/2010095_2010141'], 
                 'ERS_Hector_EQ' : ['intf/1999258_1999293'], 
                 'RS2_SLC_Hawaii' : ['intf/2011134_2011230'],

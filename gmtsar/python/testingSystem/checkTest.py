@@ -29,7 +29,7 @@ def compare_nc_files(fn1,fn2,threshold=1e-3):
     f2 = xr.open_dataset(fn2)
     metadata_equal = f1.identical(f2)
     data_equal = (f1==f2).all().items()
-
+    
     # Compare variables
     for var in f1.variables:
         var1 = f1[var]
@@ -38,10 +38,10 @@ def compare_nc_files(fn1,fn2,threshold=1e-3):
             isTheSame = 'FAIL var dim '+fn1+' '+fn2
         if not np.allclose(var1,var2,rtol=threshold, atol=threshold):
             isTheSame = 'FAIL var numbers '+fn1+' '+fn2
-
+        
     if not metadata_equal:# and data_equal:
         isTheSame = 'FAIL metadata '+fn1+' '+fn2
-
+    
     try:
         xr.testing.assert_allclose(f1,f2)
         print('SUCCESS by xarray.testing.assert_allclose')
@@ -49,7 +49,7 @@ def compare_nc_files(fn1,fn2,threshold=1e-3):
     except AssertionError as e:
         print(e)
     print(isTheSame)
-
+    
     return isTheSame
 
 def compare_txt_files(fn1,fn2,threshold=1e-3):
@@ -59,7 +59,7 @@ def compare_txt_files(fn1,fn2,threshold=1e-3):
         result2 = f2.read().split()
     if len(result1) != len(result2):
         isTheSame = 'FAIL '+fn1+' '+fn2
-
+    
     for num1,num2 in zip(result1,result2):
         fnum1, fnum2 = float(num1),float(num2)
         if abs(fnum1-fnum2) > threshold:
@@ -112,6 +112,7 @@ def findErrorsInLogFiles(rootDir):
                     else:
                         print('No Error found in ', os.path.join(root,file))
 
+
 for caseName in caseNameList:
     print(' ')
     print('Comparing case ', caseName)
@@ -124,4 +125,6 @@ for caseName in caseNameList:
                     compare_files(testPath, refPath, fileName, 'png')
                 elif 'grd' in fileName:
                     compare_files(testPath, refPath, fileName, 'grd')
+
     findErrorsInLogFiles(testRoot+'/'+caseName)
+
