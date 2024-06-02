@@ -140,7 +140,8 @@ def delete(fn):  # FIXME: Identify what file types this is being called on and u
     delete file named fn. Currently supports only directory trees,
     find usages and fix to be filetype specific
     """
-    shutil.rmtree(fn)
+    os.system("rm -rf " + fn)
+    # shutil.rmtree(fn)
 
 def assign_arg(arg: list, txt):
     """
