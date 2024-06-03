@@ -43,7 +43,7 @@ def slc2amp():
     if (sys.argv[1].find('PRM') >= 0 or sys.argv[1].find('prm') >= 0) and sys.argv[3].find('grd') >= 0:
         print(' ')
         print('SLC2AMP: range decimation is ', sys.argv[2])
-        conv('4 '+sys.argv[2]+' '+fil1+' ' +  # FIXME: Undefined variable
+        conv('4 '+sys.argv[2]+' '+filt1+' ' +  # FIXME: Undefined variable
             sys.argv[1]+' '+sys.argv[3]+'=bf')
     else:
         print('SLC2AMP: wrong filename, exiting ... ...')
