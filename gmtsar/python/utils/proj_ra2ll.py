@@ -51,12 +51,14 @@ def proj_ra2ll():
             ["gmt", "gmtinfo", "rap", "-I16/32", "-bi3f"], False, 0, -10000)
         print('PROJ_RA2ll: region is ', region)
 
-        cmd = 'gmt surface ' + \
-            sys.argv[1]+' -i0,1,3 -bi5d '+region+' -I16/32 -T.50 -Graln.grd '+V
-        run(cmd)
-        cmd = 'gmt surface ' + \
-            sys.argv[1]+' -i0,1,4 -bi5d '+region+' -I16/32 -T.50 -Gralt.grd '+V
-        run(cmd)
+        # cmd = 'gmt surface ' + \
+        #     sys.argv[1]+' -i0,1,3 -bi5d '+region+' -I16/32 -T.50 -Graln.grd '+V
+        surface(f'{sys.argv[1]} -i0,1,3 -bi5d {region} -I16/32 -T.50 -Graln.grd {V}')
+        # run(cmd)
+        # cmd = 'gmt surface ' + \
+        #     sys.argv[1]+' -i0,1,4 -bi5d '+region+' -I16/32 -T.50 -Gralt.grd '+V
+        # run(cmd)
+        surface(f'{sys.argv[1]} -i0,1,4 -bi5d {region} -I16/32 -T.50 -Gralt.grd {V}')
 
     print(' ')
     print('PROJ_RA2ll: add lon and lat columns and then just keep lon, lat, phase ... ...')
@@ -91,11 +93,13 @@ def proj_ra2ll():
 
     print('PROJ_RA2ll: R is ', R)
 
-    cmd = 'gmt blockmedian llp '+R+' -bi3f -bo3f -I'+incs[0]+" -r -V > llpb"
-    run(cmd)
-    cmd = 'gmt xyz2grd llpb '+R+' -I' + \
-        incs[0]+'  -r -fg -G'+sys.argv[3]+' -bi3f'
-    run(cmd)
+    # cmd = 'gmt blockmedian llp '+R+' -bi3f -bo3f -I'+incs[0]+" -r -V > llpb"
+    # run(cmd)
+    blockmedian(f'llp {R} -bi3f -bo3f -I{incs[0]} -r -V > llpb')
+    # cmd = 'gmt xyz2grd llpb '+R+' -I' + \
+    #     incs[0]+'  -r -fg -G'+sys.argv[3]+' -bi3f'
+    # run(cmd)
+    xyz2grd(f'llpb {R} -I{incs[0]}  -r -fg -G{sys.argv[3]} -bi3f')
     run('rm rap* llp llpb raln ralt')  # FIXME: use os.remove() instead of run()
 
     print("PROJ_RA2ll - END ... ...")

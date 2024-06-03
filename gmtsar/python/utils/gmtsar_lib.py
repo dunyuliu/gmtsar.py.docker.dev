@@ -216,6 +216,12 @@ def blockmean(cmd_str):
     """
     os.system(f"gmt blockmean {cmd_str}")
 
+def blockmedian(cmd_str):
+    """
+    blockmedian is a wrapper for the gmt blockmedian command.
+    """
+    os.system(f"gmt blockmedian {cmd_str}")
+
 def surface(cmd_str):
     """
     surface is a wrapper for the gmt surface command.
@@ -511,3 +517,9 @@ def nearest_grid(cmd_str):
     Wrapper for the nearest_grid.c command in gmtsar
     """
     os.system(f'nearest_grid {cmd_str}')
+
+def phasediff(cmd_str):
+    """
+    Wrapper for the phasediff.c command in gmtsar TODO: update to use ctypes
+    """
+    os.system(f'phasediff {cmd_str}')

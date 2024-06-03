@@ -37,12 +37,14 @@ def geocode():
 
     print('GEOCODE: first mask the phase and phase gradient using the correlation ... ...')
     print(' ')
-    cmd = 'gmt grdmath corr.grd ' + \
-        sys.argv[1]+' GE 0 NAN mask.grd MUL = mask2.grd '+V
-    run(cmd)  # FIXME: update to use wrapper
+    grdmath(f'corr.grd {sys.argv[1]} GE 0 NAN mask.grd MUL = mask2.grd {V}')
+    # cmd = 'gmt grdmath corr.grd ' + \
+    #     sys.argv[1]+' GE 0 NAN mask.grd MUL = mask2.grd '+V
+    # run(cmd)  # FIXME: update to use wrapper
 
-    cmd = 'gmt grdmath phase.grd mask2.grd MUL = phase_mask.grd'
-    run(cmd)  # FIXME: See above
+    grdmath('phase.grd mask2.grd MUL = phase_mask.grd')
+    # cmd = 'gmt grdmath phase.grd mask2.grd MUL = phase_mask.grd'
+    # run(cmd)  # FIXME: See above
 
     if check_file_report('xphase.grd') is True:
         grdmath('xphase.grd mask2.grd MUL = xphase_mask.grd')
@@ -98,9 +100,10 @@ def geocode():
 
     if check_file_report('unwrap_mask.grd') is True:
         wavel = grep_value('*.PRM', 'wavelength', 3)
-        cmd = 'gmt grdmath unwrap_mask.grd ' + \
-            str(wavel)+' MUL -79.58 MUL = los.grd'
-        run(cmd)  # FIXME: modify to use wrappers
+        grdmath(f'unwrap_mask.grd {wavel} MUL -79.58 MUL = los.grd')
+        # cmd = 'gmt grdmath unwrap_mask.grd ' + \
+        #     str(wavel)+' MUL -79.58 MUL = los.grd'
+        # run(cmd)  # FIXME: modify to use wrappers
         grdgradient('los.grd -Nt.9 -A0. -Glos_grad.grd')
 
         cmd_grdinfo = ["gmt", "grdinfo", "-C", "-L2", "los.grd"]

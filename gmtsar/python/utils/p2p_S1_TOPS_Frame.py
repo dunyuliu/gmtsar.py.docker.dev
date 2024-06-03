@@ -72,7 +72,7 @@ def processOneSubswath(subswathId, fm, fs):
     file_shuttle('config.py', folderName+'/config.py', 'cp')
     os.chdir(folderName)
     os.system('pwd')
-    cmd = ['p2p_processing', 'S1_TOPS', fm, fs, 'config.py']
+    cmd = ['p2p_processing.py', 'S1_TOPS', fm, fs, 'config.py']
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     with open('output.log.txt', 'w') as f:
         f.write(result.stdout)

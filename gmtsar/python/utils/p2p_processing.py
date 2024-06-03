@@ -716,29 +716,29 @@ def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, az
             if shift_topo == 1:
                 file_shuttle('../../topo/topo_shift.grd', '.', 'link')
 
-                cmd = 'intf '+ref+'.PRM '+rep+'.PRM -topo topo_shift.grd'
+                cmd = 'intf.py '+ref+'.PRM '+rep+'.PRM -topo topo_shift.grd'
                 run(cmd)
 
-                cmd = 'filter '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
+                cmd = 'filter.py '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
                 run(cmd)
 
             else:
                 file_shuttle('../../topo/topo_ra.grd', '.', 'link')
 
-                cmd = 'intf '+ref+'.PRM '+rep+'.PRM -topo topo_ra.grd'
+                cmd = 'intf.py '+ref+'.PRM '+rep+'.PRM -topo topo_ra.grd'
                 run(cmd)
 
-                cmd = 'filter '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
+                cmd = 'filter.py '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
                 run(cmd)
             # endif (shift_topo == 1)
 
         else:
             print('P2P 4: NO TOPOGRAPHIC PHASE REMOVAL PORFORMED')
 
-            cmd = 'intf '+ref+'.PRM '+rep+'.PRM'
+            cmd = 'intf.py '+ref+'.PRM '+rep+'.PRM'
             run(cmd)
 
-            cmd = 'filter '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
+            cmd = 'filter.py '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
             run(cmd)
         # endif (topo_phase == 1)
         # FIXME: Above run commands should use wrappers
@@ -774,29 +774,29 @@ def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, az
             if shift_topo == 1:
                 file_shuttle('../../topo/topo_shift.grd', '.', 'link')
 
-                cmd = 'intf '+ref+'.PRM '+rep+'.PRM -topo topo_shift.grd'
+                cmd = 'intf.py '+ref+'.PRM '+rep+'.PRM -topo topo_shift.grd'
                 run(cmd)
 
-                cmd = 'filter '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
+                cmd = 'filter.py '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
                 run(cmd)
 
             else:
                 file_shuttle('../../topo/topo_ra.grd', '.', 'link')
 
-                cmd = 'intf '+ref+'.PRM '+rep+'.PRM -topo topo_ra.grd'
+                cmd = 'intf.py '+ref+'.PRM '+rep+'.PRM -topo topo_ra.grd'
                 run(cmd)
 
-                cmd = 'filter '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
+                cmd = 'filter.py '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
                 run(cmd)
             # endif (shift_topo == 1)
 
         else:
             print('NO TOPOGRAPHIC PHASE REMOVAL PORFORMED')
 
-            cmd = 'intf '+ref+'.PRM '+rep+'.PRM'
+            cmd = 'intf.py '+ref+'.PRM '+rep+'.PRM'
             run(cmd)
 
-            cmd = 'filter '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
+            cmd = 'filter.py '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
             run(cmd)
         # endif (topo_phase == 1)
 
@@ -1000,7 +1000,10 @@ def p2p_processing(debug):
         azimuth_dec = config['make_filter_intfs'][SAT]['azimuth_dec']
     except KeyError:
         azimuth_dec = None
-    SLC_factor = -999 # FIXME: This is not defined under S1_TOPS, should this be added?
+    try:
+        SLC_factor = config['ERS_preprocessing'][SAT]['SLC_factor']
+    except KeyError:
+        SLC_factor = -999
     print('P2P 0: proc_stage   =', proc_stage)  # NOTE: if these are defined in a class, class can have a function to export all values to logging module
     print('P2P 0: skip_stage   =', skip_stage)
     print('P2P 0: skip_master  =', skip_master)
