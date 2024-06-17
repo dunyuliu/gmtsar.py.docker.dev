@@ -54,7 +54,7 @@ def catch_output_cmd(cmd_list, choose_split=False, split_id=-999, digit_id=-1000
     """
     catch_output_cmd takes in cmd_list and return the string
     """
-    tmp = subprocess.os.system(
+    tmp = subprocess.run(
         cmd_list, stdout=subprocess.PIPE).stdout.decode('utf-8').strip()
 
     if choose_split is True:  # if choose_split:
