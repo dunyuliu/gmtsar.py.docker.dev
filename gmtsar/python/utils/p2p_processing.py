@@ -12,6 +12,7 @@ import sys
 import os
 import subprocess
 import glob
+import shutil
 from gmtsar_lib import *
 
 
@@ -249,7 +250,6 @@ def P2P2FocusAlign(SAT, master, aligned, skip_master, iono):
                 run(cmd)
                 replace_strings(master+".PRM", "wavelength",
                                 "radar_wavelength = "+wh1)
-
                 os.chdir("../SLC")
 
             if skip_master == 0 or skip_master == 1:

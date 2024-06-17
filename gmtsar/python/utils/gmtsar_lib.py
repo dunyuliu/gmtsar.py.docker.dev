@@ -13,27 +13,38 @@ file_shuttle
 import os
 import re
 import subprocess
-import shutil
 from make_config import write_commented_config, read_config
 
 def init_config():
     """
     Initialize the config file.
     """
+    if os.path.exists('config.py'):
+        print('WARNING: using config.py is depreciated for security reasons. Please use config.yaml instead.')
+        return read_pyconfig()
     if not os.path.exists('config.yaml'):
         write_commented_config('config.yaml')
         print('config.yaml is generated')
     config = read_config('config.yaml')
     return config
 
+def read_pyconfig():
+    """
+    Reads the old config.py file rather than the new config.yaml file.
+    WARNING: this function is depreciated, as it uses 
+    exec() to run the config.py file. This is a security risk.
+    """
+    with open('config.py') as f:
+        exec(f.read())
+    return locals()
+
 def check_file_report(fn):
     """
     Check if a file exists.
     If not, print error message.
     """
-    exist = True
-    if os.path.isfile(fn) is False:
-        exist = False
+    exist = os.path.isfile(fn)
+    if exist is False:
         print(" no file " + fn)
         # sys.exit()
     return exist

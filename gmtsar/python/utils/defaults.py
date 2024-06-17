@@ -88,21 +88,21 @@ ERS_processing:
 
 
 
-SLC_align:
 ################################################
 #   parameters for focus and align SLC images  #
 #   - align.csh                                #
 ################################################
 # region to cut in radar coordinates (leave it blank if process the whole image)
 # example 300/5900/0/25000
+SLC_align:
   region_cut: -999
 
 #
-make_topo_ra:
 #####################################
 #   parameters for make topo_ra     #
 #   - dem2topo_ra.csh               #
 #####################################
+make_topo_ra:
 # subtract topo_ra from the phase
 #  (1 -- yes; 0 -- no)
   topo_phase: 1
@@ -159,6 +159,8 @@ make_filter_intfs:
 # put '0' if assume master as reference and aligned as repeat [Default]
 # phase: repeat phase - reference phase
   switch_master: 0
+  switch_land: -999
+
 
 # filters
 # look at the filter/ folder to choose other filters
@@ -273,11 +275,12 @@ geocode:
 #####################################
 #   Other parameters                #
 #####################################
-S1_TOPS:
-  det_stitch: 0
+misc:
+  S1_TOPS:
+    det_stitch: 0
 
-ALOS2_SCAN:
-  det_stitch: 0
+  ALOS2_SCAN:
+    det_stitch: 0
 """
 DEFAULT_CONFIG = {
     'processing_stage': {'proc_stage': 1, 'skip_stage': -999, 'skip_1': 0, 'skip_2': 0,
@@ -301,7 +304,7 @@ DEFAULT_CONFIG = {
                      'CSK_SLC': {'shift_topo': 0},
                      'TSX': {'shift_topo': 0},
                      'RS2': {'shift_topo': 0}},
-    'make_filter_intfs': {'switch_master': 0,
+    'make_filter_intfs': {'switch_master': 0, 'switch_land': -999,
                           'ALOS2_SCAN': {'filter_wavelength': 400, 'dec_factor': 4, 'range_dec': 4, 'azimuth_dec': 8},
                           'RS2': {'filter_wavelength': 100, 'dec_factor': 1},
                           'TSX': {'filter_wavelength': 100, 'dec_factor': 1},
@@ -318,6 +321,6 @@ DEFAULT_CONFIG = {
                           'iono_filt_azi': 1.0, 'iono_dsamp': 1, 'iono_skip_est': 1},
     'unwrapping': {'threshold_snaphu': 0, 'near_interp': 0, 'mask_water': 1, 'defomax': 0},
     'geocode': {'threshold_geocode': 0.1},
-    'S1_TOPS': {'det_stitch': 0},
-    'ALOS2_SCAN': {'det_stitch': 0}
+    'misc': {'S1_TOPS': {'det_stitch': 0}, 'ALOS2_SCAN': {'det_stitch': 0}
+    }
 }
