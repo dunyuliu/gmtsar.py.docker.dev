@@ -115,8 +115,8 @@ def p2pS1TopsFrame():
     config = init_config()  # FIXME: Figure out where these variables are and which satelite they are for
     correct_iono = config['make_filter_intfs']['correct_iono']
     det_stitch = config['misc']['S1_TOPS']['det_stitch']
-    iono_filt_rng = config['iono_filt_rng']
-    iono_filt_azi = config['iono_filt_azi']
+    iono_filt_rng = config['make_filter_intfs']['iono_filt_rng']
+    iono_filt_azi = config['make_filter_intfs']['iono_filt_azi']
 
     def merge(skip_master, fmList, fsList):
         if skip_master != 2:
