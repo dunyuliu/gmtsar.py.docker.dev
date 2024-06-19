@@ -164,7 +164,6 @@ def preprocEnvislc(master, aligned, skip_master, RAD):
     print('PREPROC: Pre-process ENVISAT SLC data - START')
     if skip_master == 0 or skip_master == 2:
         ENVI_SLC_pre_process_csh(master+' '+str(RAD))
-    NEAR = grep_value(master+'.PRM', 'near_range', 3)  # FIXME: not used
     RAD = grep_value(master+'.PRM', 'earth_radius', 3)
     if skip_master == 0 or skip_master == 1:
         ENVI_SLC_pre_process_csh(aligned+' '+str(RAD))

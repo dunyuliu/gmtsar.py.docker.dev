@@ -176,7 +176,6 @@ def snaphu():
     limitU = round(limitU, 1)
     limitL = float(tmp[11])-float(tmp[12])*2.
     limitL = round(limitL, 1)
-    std = round(float(tmp[12]), 1)  # FIXME: variable is never used
     makecpt('-Cseis -I -Z -T'+'''"'''+str(limitL) +
         '''"/"'''+str(limitU)+'''"/1 -D > unwrap.cpt''')
 
@@ -185,8 +184,6 @@ def snaphu():
             ["gmt", "grdinfo", "unwrap.grd", "-C"], True, -999, -100000)
         print('SNAPHU: output from cmd gmt grdinfo unwrap.grd -C is',
               tmp1, 'which should be a list')
-        boundR = (float(tmp1[2])-float(tmp1[1]))/4  # FIXME: Varibles are not used
-        boundA = (float(tmp1[4])-float(tmp1[3]))/4
 
     grdimage('unwrap.grd -Iunwrap_grad.grd -Cunwrap.cpt -JX6.5i -Bxaf+lRange -Byaf+lAzimuth -BWSen -X1.3i -Y3i -P -K > unwrap.ps')
     psscale('-Runwrap.grd -J -DJTC+w5/0.2+h+e -Cunwrap.cpt -Bxaf+l"Unwrapped phase" -By+lrad -O >> unwrap.ps''')

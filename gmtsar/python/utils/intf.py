@@ -74,12 +74,7 @@ def intf():
 
     print('INTF: form the interferogram optionally using topo_ra and modelphase ... ...')
     if n in (3, 5, 7):
-        # cmd = 'phasediff'
-        # for i in range(n-1):  # FIXME: This could be done with a ' '.join(arg) instead
-        #     # FIXME: update to use phasediff wrapper
-        #     cmd = cmd + ' '+str(arg[i])
         phasediff(' '.join(arg[:n-1]))
-        # run(cmd)
     else:
         print(intf.__doc__)
 

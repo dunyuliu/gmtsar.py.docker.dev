@@ -129,7 +129,7 @@ def geocode():
     print('GEOCODE: geocode ... ...')
     print('GEOCODE: project correlation, phase, unwrapped and amplitude back to lon lat coordinates ... ...')
 
-    remarked = ''  # FIXME: This variable is never used
+    # remarked = ''  # FIXME: This variable is never used
     run('proj_ra2ll.py trans.dat corr.grd corr_ll.grd')  # FIXME: import these
     grdedit('-D//"dimensionless"/1///"$PWD:t geocoded correlation"/"$remarked"  corr_ll.grd')
 

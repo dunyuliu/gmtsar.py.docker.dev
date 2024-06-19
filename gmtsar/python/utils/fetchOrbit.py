@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import numpy as np
 import requests
 import re
 import os
@@ -46,7 +45,8 @@ def FileToTimeStamp(safename):
     try:
         tstamp = datetime.datetime.strptime(fields[-4], datefmt)
         sstamp = datetime.datetime.strptime(fields[-5], datefmt)
-    except:
+    except Exception as e:
+        print('Failed to parse date from SAFE name: ', e)  # TODO: add specific exception type
         p = re.compile(r'(?<=_)\d{8}')
         dt2 = p.search(safename).group()
         tstamp = datetime.datetime.strptime(dt2, '%Y%m%d')
@@ -91,7 +91,7 @@ def download_file(url, outdir='.', session=None):
     print('Downloading URL: ', url)
     request = session.get(url, stream=True, verify=True, auth=credentials)
 
-    try:
+    try:  # TODO: add specific exception type and rework this code to be more readable
         val = request.raise_for_status()
         success = True
     except:
@@ -156,7 +156,8 @@ if __name__ == '__main__':
 
             if match is not None:
                 success = True
-        except:
+        except Exception as e:  # FIXME: add specific exception type
+            print(f'an exception occured: {e}')
             pass
 
         if success:

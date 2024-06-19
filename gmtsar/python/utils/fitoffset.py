@@ -86,7 +86,6 @@ def fitoffset():
     xcorr_dr = xcorr1[:k, 1]
     xcorr_a = xcorr1[:k, 2]
     xcorr_da = xcorr1[:k, 3]
-    xcorr_SNR = xcorr1[:k, 4]  # FIXME: This variable is never used
 
     n1 = len(xcorr_r)
     print('FITOFFSET: selected data point # is ', n1)

@@ -1,7 +1,5 @@
 #!/usr/bin/python
 
-import subprocess
-import os.path
 import numpy as np
 import sys
 

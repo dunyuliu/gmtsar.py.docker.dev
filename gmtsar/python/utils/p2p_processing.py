@@ -108,7 +108,7 @@ def P2P1Preprocess(SAT, master, aligned, skip_master, cmdAppendix):
 
 
 # FIXME: SAT is never used in this function.
-def P2P2Clean(SAT, master, aligned, skip_master, iono):
+def P2P2Clean(master, aligned, skip_master, iono):
 
     print('P2P 2: if stage<=2 and skip_2 == 0')
 
@@ -514,7 +514,7 @@ def P2P2RegionCut(master, aligned, skip_master, iono):
 
 
 # FIXME: aligned is never used in this function.
-def P2P3MakeTopo(master, aligned, topo_phase, topo_interp_mode, shift_topo):
+def P2P3MakeTopo(master, topo_phase, topo_interp_mode, shift_topo):
     print('P2P 3: start from make topo_ra')
     run("cleanup.py topo")
 
@@ -530,7 +530,6 @@ def P2P3MakeTopo(master, aligned, topo_phase, topo_interp_mode, shift_topo):
         file_shuttle('../SLC/'+master+'.PRM', 'master.PRM', 'cp')
         run("ln -sf ../raw/" + master + ".LED .")
 
-        # FIXME: if check_file_report('dem.grd'): to test truthiness
         if check_file_report('dem.grd') is True:
             if topo_interp_mode == 1:
                 run("dem2topo_ra.py master.PRM dem.grd 1")
@@ -549,7 +548,6 @@ def P2P3MakeTopo(master, aligned, topo_phase, topo_interp_mode, shift_topo):
             print('P2P 3: entering directory SLC/')
             os.chdir('SLC')
             # FIXME: rng_samp_rate is never used.
-            rng_samp_rate = grep_value(master+".PRM", "rng_samp_rate", 3)
             grdinfo("../topo/topo_ra.grd > tmp.txt")
             rng = grep_value("tmp.txt", "x_inc", 7)
             slc2amp_csh(master+'.PRM '+str(rng)+' amp-'+master+'.grd') # TODO: This should invoke the python verson of slc2amp
@@ -1104,7 +1102,7 @@ def p2p_processing(debug):
         if SAT == 'S1_TOPS':
             master, aligned = renameMasterAlignedForS1tops(master, aligned)
         print('master, aligned should be modified for SAT==S1_TOPS', master, aligned)
-        P2P2Clean(SAT, master, aligned, skip_master, iono)
+        P2P2Clean(master, aligned, skip_master, iono)
         os.chdir('SLC')
         P2P2FocusAlign(SAT, master, aligned, skip_master, iono)
         if region_cut != -999:
@@ -1115,7 +1113,7 @@ def p2p_processing(debug):
         input('Press Enter to continue to Phase 3...')
 
     if stage <= 3 and skip_3 == 0:
-        P2P3MakeTopo(master, aligned, topo_phase, topo_interp_mode, shift_topo)
+        P2P3MakeTopo(master, topo_phase, topo_interp_mode, shift_topo)
     if debug == 1:
         input('Press Enter to continue to Phase 4...')
 
