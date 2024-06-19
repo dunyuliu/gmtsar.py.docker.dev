@@ -666,17 +666,20 @@ def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, az
             if shift_topo == 1:
                 file_shuttle('../../topo/topo_shift.grd', '.', 'link')
                 run('intf.py '+ref+'.PRM '+rep+'.PRM -topo topo_shift.grd')
+                print('p2p calling filter on line 669')
                 run('filter.py '+ref+'.PRM '+rep+'.PRM 500 ' +
                     dec+' '+new_incx+' '+new_incy)
             else:
                 file_shuttle('../../topo/topo_ra.grd', '.', 'link')
 
                 run('intf.py '+ref+'.PRM '+rep+'.PRM -topo topo_ra.grd')
+                print('p2p calling filter on line 676')
                 run('filter.py '+ref+'.PRM '+rep+'.PRM 500 ' +
                     dec+' '+new_incx+' '+new_incy)
         else:
             print('NO TOPOGRAPHIC PHASE REMOVAL PORFORMED')
             run('intf.py '+ref+'.PRM '+rep+'.PRM')
+            print('p2p calling filter on line 682')
             run('filter.py '+ref+'.PRM '+rep+'.PRM 500 ' +
                 dec+' '+new_incx+' '+new_incy)
 
@@ -720,6 +723,7 @@ def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, az
                 run(cmd)
 
                 cmd = 'filter.py '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
+                print('p2p calling filter on line 727')
                 run(cmd)
 
             else:
@@ -729,6 +733,7 @@ def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, az
                 run(cmd)
 
                 cmd = 'filter.py '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
+                print('p2p calling filter on line 737')
                 run(cmd)
             # endif (shift_topo == 1)
 
@@ -739,6 +744,7 @@ def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, az
             run(cmd)
 
             cmd = 'filter.py '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
+            print('p2p calling filter on line 748')
             run(cmd)
         # endif (topo_phase == 1)
         # FIXME: Above run commands should use wrappers
@@ -778,6 +784,7 @@ def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, az
                 run(cmd)
 
                 cmd = 'filter.py '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
+                print('p2p calling filter on line 788')
                 run(cmd)
 
             else:
@@ -787,6 +794,7 @@ def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, az
                 run(cmd)
 
                 cmd = 'filter.py '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
+                print('p2p calling filter on line 798')
                 run(cmd)
             # endif (shift_topo == 1)
 
@@ -797,6 +805,7 @@ def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, az
             run(cmd)
 
             cmd = 'filter.py '+ref+'.PRM '+rep+'.PRM 500 '+dec+' '+new_incx+' '+new_incy
+            print('p2p calling filter on line 809')
             run(cmd)
         # endif (topo_phase == 1)
 
@@ -832,9 +841,11 @@ def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, az
 
 def runFilter(ref, rep, filt, dec, range_dec, azimuth_dec, compute_phase_gradient):  # FIXME: use variable name other than 'filter' as it is a reserved keyword.
     if range_dec == -999 and azimuth_dec == -999:  # FIXME: f strings could condense this and preform implicit type conversion
+        print("p2p calling Filter on line 844")
         run('filter.py '+ref+'.PRM '+rep+'.PRM '+str(filt) +
             ' '+str(dec)+' '+str(compute_phase_gradient))
     else:
+        print('p2p calling Filter on line 848')
         run('filter.py '+ref+'.PRM '+rep+'.PRM '+str(filt)+' '+str(dec)+' ' +
             str(range_dec)+' '+str(azimuth_dec)+' '+str(compute_phase_gradient))
 
@@ -967,16 +978,12 @@ def p2p_processing(debug):
     try:  # FIXME: change to have default none vals for non compatable SATs
         shift_topo = config['make_topo_ra'][SAT]['shift_topo']
     except KeyError:
-        shift_topo = None
+        shift_topo = 0  # FIXME: add to config file
     switch_master = config['make_filter_intfs']['switch_master']
     try:
         filter_wavelength = config['make_filter_intfs'][SAT]['filter_wavelength']
     except KeyError:
         filter_wavelength = None
-    try:
-        dec_factor = config['make_filter_intfs'][SAT]['dec_factor']
-    except KeyError:
-        dec_factor = None
     compute_phase_gradient = config['make_filter_intfs']['compute_phase_gradient']
     correct_iono = config['make_filter_intfs']['correct_iono']
     iono_filt_rng = config['make_filter_intfs']['iono_filt_rng']
@@ -990,16 +997,11 @@ def p2p_processing(debug):
     threshold_geocode = config['geocode']['threshold_geocode']
     spec_div = config['ERS_processing']['S1_TOPS']['spec_div']
     spec_mode = config['ERS_processing']['S1_TOPS']['spec_mode']
-    # FIXME: switch_land is not defined in the config file, should this be added?
+    dec_factor = config['make_filter_intfs'][SAT]['dec_factor']
+    # FIXME: add defaults to config file
     switch_land = -999
-    try:
-        range_dec = config['make_filter_intfs'][SAT]['range_dec']  # TODO: add none defaults for other SAT params in config
-    except KeyError:
-        range_dec = None
-    try:
-        azimuth_dec = config['make_filter_intfs'][SAT]['azimuth_dec']
-    except KeyError:
-        azimuth_dec = None
+    range_dec = config['make_filter_intfs'][SAT]['range_dec']  # TODO: add none defaults for other SAT params in config
+    azimuth_dec = config['make_filter_intfs'][SAT]['azimuth_dec']
     try:
         SLC_factor = config['ERS_preprocessing'][SAT]['SLC_factor']
     except KeyError:

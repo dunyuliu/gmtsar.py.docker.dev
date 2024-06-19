@@ -9,6 +9,7 @@ Martin Hawks 01/06/2024
 """
 
 DEFAULT_COMENTED_CONFIG = """
+
 #
 # This is the default configuration file for p2p_processing
 #
@@ -82,6 +83,31 @@ ERS_processing:
 
   ALOS2_SCAN:
     SLC_factor: 2.0
+
+  RS2:
+    spec_div: -999
+
+  TSX:
+    spec_div: -999
+
+  CSK_RAW:
+    spec_div: -999
+
+  CSK_SLC:
+    spec_div: -999
+
+  S1_STRIP:
+    spec_div: -999
+
+  ERS:
+    spec_div: -999
+
+  ALOS:
+    spec_div: -999
+
+  ENVI:
+    spec_div: -999
+
 
 # ---------------------------------- #
 #  end parameters for ERS processing    #
@@ -176,18 +202,26 @@ make_filter_intfs:
   RS2:
     filter_wavelength: 100
     dec_factor: 1
+    range_dec: -999
+    azimuth_dec: -999
 
   TSX:
     filter_wavelength: 100
     dec_factor: 1
+    range_dec: -999
+    azimuth_dec: -999
 
   CSK_RAW:
     filter_wavelength: 200
     dec_factor: 2
+    range_dec: -999
+    azimuth_dec: -999
 
   CSK_SLC:
     filter_wavelength: 200
     dec_factor: 2
+    range_dec: -999
+    azimuth_dec: -999
 
   S1_TOPS:
     filter_wavelength: 200
@@ -198,26 +232,44 @@ make_filter_intfs:
   S1_STRIP:
     filter_wavelength: 200
     dec_factor: 2
+    range_dec: -999
+    azimuth_dec: -999
 
   ERS:
     filter_wavelength: 200
     dec_factor: 2
+    range_dec: -999
+    azimuth_dec: -999
+
+  ENVI_SLC:
+    filter_wavelength: 200
+    dec_factor: 2
+    range_dec: -999
+    azimuth_dec: -999
 
   ENVI:
     filter_wavelength: 200
     dec_factor: 2
+    range_dec: -999
+    azimuth_dec: -999
 
   ALOS:
     filter_wavelength: 20
     dec_factor: 2
+    range_dec: -999
+    azimuth_dec: -999
 
   ALOS_SLC:
     filter_wavelength: 200
     dec_factor: 2
+    range_dec: -999
+    azimuth_dec: -999
 
   ALOS2:
     filter_wavelength: 200
     dec_factor: 2
+    range_dec: -999
+    azimuth_dec: -999
 
 # decimation of images is controlled by the dec_factor parameter.
 # decimation control the size of the amplitude and phase images. It is either 1 or 2.
@@ -289,8 +341,15 @@ DEFAULT_CONFIG = {
     'ERS_processing': {'S1_TOPS': {'spec_div': 0, 'spec_mode': 0},
                        'ALOS_SLC': {'SLC_factor': 0.02},
                        'ALOS2': {'SLC_factor': 2.0},
-                       'ALOS2_SCAN': {'SLC_factor': 2.0}
-                       },
+                       'ALOS2_SCAN': {'SLC_factor': 2.0},
+                       'RS2': {'spec_div': -999}, 'TSX': {'spec_div': -999},
+                       'CSK_RAW': {'spec_div': -999},
+                       'CSK_SLC': {'spec_div': -999},
+                       'S1_STRIP': {'spec_div': -999},
+                       'ERS': {'spec_div': -999},
+                       'ALOS': {'spec_div': -999},
+                       'ENVI_SLC': {'spec_div': -999},
+                       'ENVI': {'spec_div': -999}},
     'SLC_align': {'region_cut': -999},
     'make_topo_ra': {'topo_phase': 1, 'topo_interp_mode': 0,
                      'ALOS_SLC': {'shift_topo': 1},
@@ -304,23 +363,24 @@ DEFAULT_CONFIG = {
                      'CSK_SLC': {'shift_topo': 0},
                      'TSX': {'shift_topo': 0},
                      'RS2': {'shift_topo': 0}},
-    'make_filter_intfs': {'switch_master': 0, 'switch_land': -999,
-                          'ALOS2_SCAN': {'filter_wavelength': 400, 'dec_factor': 4, 'range_dec': 4, 'azimuth_dec': 8},
-                          'RS2': {'filter_wavelength': 100, 'dec_factor': 1},
-                          'TSX': {'filter_wavelength': 100, 'dec_factor': 1},
-                          'CSK_RAW': {'filter_wavelength': 200, 'dec_factor': 2},
-                          'CSK_SLC': {'filter_wavelength': 200, 'dec_factor': 2},
-                          'S1_TOPS': {'filter_wavelength': 200, 'dec_factor': 2, 'range_dec': 8, 'azimuth_dec': 2},
-                          'S1_STRIP': {'filter_wavelength': 200, 'dec_factor': 2},
-                          'ERS': {'filter_wavelength': 200, 'dec_factor': 2},
-                          'ENVI': {'filter_wavelength': 200, 'dec_factor': 2},
-                          'ALOS': {'filter_wavelength': 20, 'dec_factor': 2},
-                          'ALOS_SLC': {'filter_wavelength': 200, 'dec_factor': 2},
-                          'ALOS2': {'filter_wavelength': 200, 'dec_factor': 2},
-                          'compute_phase_gradient': 0, 'correct_iono': 0, 'iono_filt_rng': 1.0,
-                          'iono_filt_azi': 1.0, 'iono_dsamp': 1, 'iono_skip_est': 1},
+    'make_filter_intfs': {
+        'switch_master': 0, 'switch_land': -999,
+        'ALOS2_SCAN': {'filter_wavelength': 400, 'dec_factor': 4, 'range_dec': 4, 'azimuth_dec': 8},
+        'RS2': {'filter_wavelength': 100, 'dec_factor': 1, 'range_dec': -999, 'azimuth_dec': -999},
+        'TSX': {'filter_wavelength': 100, 'dec_factor': 1, 'range_dec': -999, 'azimuth_dec': -999},
+        'CSK_RAW': {'filter_wavelength': 200, 'dec_factor': 2, 'range_dec': -999, 'azimuth_dec': -999},
+        'CSK_SLC': {'filter_wavelength': 200, 'dec_factor': 2, 'range_dec': -999, 'azimuth_dec': -999},
+        'S1_TOPS': {'filter_wavelength': 200, 'dec_factor': 2, 'range_dec': 8, 'azimuth_dec': 2},
+        'S1_STRIP': {'filter_wavelength': 200, 'dec_factor': 2, 'range_dec': -999, 'azimuth_dec': -999},
+        'ERS': {'filter_wavelength': 200, 'dec_factor': 2, 'range_dec': -999, 'azimuth_dec': -999},
+        'ENVI': {'filter_wavelength': 200, 'dec_factor': 2, 'range_dec': -999, 'azimuth_dec': -999},
+        'ENVI_SLC': {'filter_wavelength': 200, 'dec_factor': 2, 'range_dec': -999, 'azimuth_dec': -999},
+        'ALOS': {'filter_wavelength': 20, 'dec_factor': 2, 'range_dec': -999, 'azimuth_dec': -999},
+        'ALOS_SLC': {'filter_wavelength': 200, 'dec_factor': 2, 'range_dec': -999, 'azimuth_dec': -999},
+        'ALOS2': {'filter_wavelength': 200, 'dec_factor': 2, 'range_dec': -999, 'azimuth_dec': -999},
+        'compute_phase_gradient': 0, 'correct_iono': 0, 'iono_filt_rng': 1.0,
+        'iono_filt_azi': 1.0, 'iono_dsamp': 1, 'iono_skip_est': 1},
     'unwrapping': {'threshold_snaphu': 0, 'near_interp': 0, 'mask_water': 1, 'defomax': 0},
     'geocode': {'threshold_geocode': 0.1},
-    'misc': {'S1_TOPS': {'det_stitch': 0}, 'ALOS2_SCAN': {'det_stitch': 0}
+    'misc': {'S1_TOPS': {'det_stitch': 0}, 'ALOS2_SCAN': {'det_stitch': 0}}
     }
-}

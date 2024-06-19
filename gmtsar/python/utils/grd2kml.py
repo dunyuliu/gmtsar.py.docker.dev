@@ -32,8 +32,11 @@ def grd2kml():
     V = '-V'
     VS = '-S -V'
 
+    print(f'current working directory is {os.getcwd()}. Its contents are {os.listdir(os.getcwd())}')
     DX = subprocess.run(["gmt", "grdinfo", sys.argv[1]+".grd", "-C"],
-                        stdout=subprocess.PIPE).stdout.decode('utf-8').strip().split()[7]
+                        stdout=subprocess.PIPE).stdout.decode('utf-8')
+    print('GRD2KML: DX is ', DX)
+    DX = DX.strip().split()[7]
     print('GRD2KML: DX is ', DX)
     DPI = subprocess.run(["gmt", "gmtmath", "-Q", DX, "INV", "RINT", "="],
                          stdout=subprocess.PIPE).stdout.decode('utf-8').strip()

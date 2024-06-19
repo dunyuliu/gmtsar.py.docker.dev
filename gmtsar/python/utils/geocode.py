@@ -47,6 +47,8 @@ def geocode():
     # run(cmd)  # FIXME: See above
 
     if check_file_report('xphase.grd') is True:
+        print('reached line 50 where xphase.grd exists')
+        print(os.listdir())
         grdmath('xphase.grd mask2.grd MUL = xphase_mask.grd')
         grdmath('yphase.grd mask2.grd MUL = yphase_mask.grd')
 

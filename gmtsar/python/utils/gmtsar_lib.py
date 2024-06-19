@@ -14,6 +14,7 @@ import os
 import re
 import subprocess
 from make_config import write_commented_config, read_config
+import inspect
 
 def init_config():
     """
@@ -169,6 +170,11 @@ def run(cmd):
     """
     os.system and print the command specified in cmd.
     """
+    if 'gmt conv ' in cmd:
+        stack = inspect.stack()
+        caller = stack[1]
+        print(f"gmt conv called by {caller.filename}:{caller.lineno}")
+        
     print(" ")
     print(cmd)
     os.system(cmd)
@@ -286,13 +292,13 @@ def make_gaussian_filter(cmd_str):
     make_gaussian_filter is a wrapper for the make_gaussian_filter.c
     file in the gmtsar code. TODO: interface with ctypes
     """
-    os.system(f"gmt makecpt {cmd_str}")
+    os.system(f"make_gaussian_filter {cmd_str}")
 
 def conv(cmd_str):
     """
     conv is a wrapper for the gmtsar conv.c file. TODO: interface with ctypes
     """
-    os.system(f"gmt conv {cmd_str}")
+    os.system(f"conv {cmd_str}")
 
 def makecpt(cmd_str):
     """

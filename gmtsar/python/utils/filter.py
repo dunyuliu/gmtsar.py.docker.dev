@@ -134,6 +134,7 @@ def filter():
     # assign idec and jdec
     with open('ijdec', 'r') as f:
         line = f.readline()  # idjec is list.
+    print(line)
     ijdec = line.split()
     idec = int(ijdec[0])*dec
     jdec = int(ijdec[1])*dec

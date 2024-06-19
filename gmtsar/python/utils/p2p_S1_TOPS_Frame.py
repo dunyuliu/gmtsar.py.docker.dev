@@ -172,7 +172,7 @@ def p2pS1TopsFrame():
     print('P2P_S1_TOPS_FRAME: fmList is ', fmList)
     print('P2P_S1_TOPS_FRAME: fsList is ', fsList)
 
-    skip_master = grep_value('config.py', 'skip_master', 3)
+    skip_master = config['processing_stage']['skip_master']
 
     linkFiles(0, masterSafe, masterEof, alignedSafe,
               alignedEof, fmList, fsList)
