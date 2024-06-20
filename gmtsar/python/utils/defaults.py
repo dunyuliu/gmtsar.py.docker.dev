@@ -133,7 +133,7 @@ ERS_processing:
 
   ENVI_SLC:
     spec_div: 0
-    spec_mode -999
+    spec_mode: -999
     SLC_factor: -999
 
 
