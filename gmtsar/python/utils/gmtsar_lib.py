@@ -13,12 +13,11 @@ file_shuttle
 import os
 import re
 import subprocess
-from make_config import write_commented_config, read_config
-import inspect
+from make_config import write_commented_config, read_config, default_pyconfig
 
 def init_config():
     """
-    Initialize the config file.
+    Initialize the config file. return the config dictionary.
     """
     if os.path.exists('config.py'):
         print('WARNING: using config.py is depreciated for security reasons. Please use config.yaml instead.')
@@ -36,8 +35,9 @@ def read_pyconfig():
     exec() to run the config.py file. This is a security risk.
     """
     with open('config.py') as f:
-        exec(f.read())
-    return locals()
+        exec(f.read(), globals())  # Execute the config file to load the variables and push them to the global scope
+        default_pyconfig()  # Set default values for any missing variables
+    return False  # Return False to indicate that the variables have been loaded and do not need to be read from a dict
 
 def check_file_report(fn):
     """
@@ -98,39 +98,29 @@ def grep_value(fn, s, i):
     return intFloatOrString(val)
 
 
-def replace_strings(fn, s0, s1):  # FIXME: I think re.sub does this already. Is there a reason it is not in use?
+def replace_strings(fn, s0, s1):
     """
     replace_strings will replace str s0 in file fn,
     with the string s1, and update fn.
     """
     with open(f"{fn}") as f:
-        lines = f.readlines()
         txt = f.read()
-    fixed = re.sub(s0, s1, txt)
+    escaped_s0 = re.escape(s0)  # Escape the string to avoid regex issues
+    fixed = re.sub(escaped_s0, s1, txt)  # Use regex to replace the string
     with open(fn, 'w') as f:
         f.write(fixed)
 
-    updated_lines = []
-    for line in lines:
-        if s0 in line:
-            line = f"{s1}\n"
-        updated_lines.append(line)
 
-    with open(f"{fn}", "w") as f:
-        f.writelines(updated_lines)
-
-
-def append_new_line(fn, s0):
+def append_new_line(fn, s0):  # Ask dunyu about this
     """
     append the string s0 as a new line at the end of file named fn.
     """
-    with open(fn, "a+") as f:
-        f.seek(0)
-        data = f.read(100)
-        if len(data) > 0:
-            f.write("\n")
-        f.write(s0)
-
+    if os.path.getsize(fn) == 0:  # If the file is empty, write the string to the file
+        with open(fn, "w") as f:
+            f.write(s0)
+    else:
+        with open(fn, "a") as f:  # if the file is not empty, append the string to the end
+            f.write('\n' + s0)
 
 def file_shuttle(fn0, fn1, opt):
     """
@@ -170,11 +160,6 @@ def run(cmd):
     """
     os.system and print the command specified in cmd.
     """
-    if 'gmt conv ' in cmd:
-        stack = inspect.stack()
-        caller = stack[1]
-        print(f"gmt conv called by {caller.filename}:{caller.lineno}")
-        
     print(" ")
     print(cmd)
     os.system(cmd)

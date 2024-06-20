@@ -474,7 +474,8 @@ def P2P2FocusAlign(SAT, master, aligned, skip_master, iono):
 
 def P2P2RegionCut(master, aligned, skip_master, iono):
     config = init_config()  # TODO: Centralize to avoid number of I/O operations
-    region_cut = config['SLC_ALIGN']['region_cut']
+    if config:
+        region_cut = config['SLC_ALIGN']['region_cut']
     print("P2P 2: region_cut !=-999 ")
     print("P2P 2: cutting SLC image to " + str(region_cut))
     if skip_master == 0 or skip_master == 2:
@@ -590,12 +591,13 @@ def switchMasterAligned(switch_master, master, aligned):
 def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, azimuth_dec,
                                  dec, filt, compute_phase_gradient, iono, iono_dsamp):  # FIXME: use variable name other than 'filter' as it is a reserved keyword.
     config = init_config()  # TODO: Centralize to avoid number of I/O operations
-    iono_skip_est = config['make_filter_intfs']['iono_skip_est']
-    mask_water = config['unwrapping']['mask_water']
-    # switch_land = config
-    iono_filt_rng = config['make_filter_intfs']['iono_filt_rng']
-    switch_land = -999  # FIXME: This should be in the config file
-    iono_filt_azi = config['make_filter_intfs']['iono_filt_azi']
+    if config:
+        iono_skip_est = config['make_filter_intfs']['iono_skip_est']
+        mask_water = config['unwrapping']['mask_water']
+        # switch_land = config
+        iono_filt_rng = config['make_filter_intfs']['iono_filt_rng']
+        switch_land = -999  # FIXME: This should be in the config file
+        iono_filt_azi = config['make_filter_intfs']['iono_filt_azi']
     print('P2P 4: start from make and filter interferograms')
     run('mkdir -p intf')  # FIXME: use os
     run('cleanup.py intf')
@@ -857,7 +859,8 @@ def getIntfSubDirName(ref, rep):
 
 def P2P5Unwrap(ref, rep, threshold_snaphu, mask_water, switch_land, near_interp):
     config = init_config()  # TODO: Centralize to avoid number of I/O operations
-    defomax = config['unwrapping']['defomax']
+    if config:
+        defomax = config['unwrapping']['defomax']
     if threshold_snaphu != 0:
         print('P2P 5: threshold_snaphu != 0')
         print('P2P 5: entering intf/')
@@ -954,57 +957,50 @@ def p2p_processing(debug):
         run('pop_config.py ' + SAT)
 
     print('P2P 0: read in parameters from the config.py ... ...')
-    # TODO: Find a better way of doing this
     sys.path.insert(0, os.getcwd())
     config = init_config()
-    proc_stage = config['processing_stage']['proc_stage']
-    skip_stage = config['processing_stage']['skip_stage']
-    skip_master = config['processing_stage']['skip_master']
-    skip_1 = config['processing_stage']['skip_1']
-    skip_2 = config['processing_stage']['skip_2']
-    skip_3 = config['processing_stage']['skip_3']
-    skip_4 = config['processing_stage']['skip_4']
-    skip_5 = config['processing_stage']['skip_5']
-    skip_6 = config['processing_stage']['skip_6']
-    num_patches = config['preprocess']['num_patches']
-    earth_radius = config['preprocess']['earth_radius']
-    near_range = config['preprocess']['near_range']
-    fd1 = config['preprocess']['fd1']
-    region_cut = config['SLC_align']['region_cut']
-    topo_phase = config['make_topo_ra']['topo_phase']
-    topo_interp_mode = config['make_topo_ra']['topo_interp_mode']
-    try:  # FIXME: change to have default none vals for non compatable SATs
+    if config:
+        proc_stage = config['processing_stage']['proc_stage']
+        skip_stage = config['processing_stage']['skip_stage']
+        skip_master = config['processing_stage']['skip_master']
+        skip_1 = config['processing_stage']['skip_1']
+        skip_2 = config['processing_stage']['skip_2']
+        skip_3 = config['processing_stage']['skip_3']
+        skip_4 = config['processing_stage']['skip_4']
+        skip_5 = config['processing_stage']['skip_5']
+        skip_6 = config['processing_stage']['skip_6']
+        num_patches = config['preprocess']['num_patches']
+        earth_radius = config['preprocess']['earth_radius']
+        near_range = config['preprocess']['near_range']
+        fd1 = config['preprocess']['fd1']
+        region_cut = config['SLC_align']['region_cut']
+        topo_phase = config['make_topo_ra']['topo_phase']
+        topo_interp_mode = config['make_topo_ra']['topo_interp_mode']
+        switch_master = config['make_filter_intfs']['switch_master']
+        try:
+            filter_wavelength = config['make_filter_intfs'][SAT]['filter_wavelength']
+        except KeyError:
+            filter_wavelength = None
+        compute_phase_gradient = config['make_filter_intfs']['compute_phase_gradient']
+        correct_iono = config['make_filter_intfs']['correct_iono']
+        iono_filt_rng = config['make_filter_intfs']['iono_filt_rng']
+        iono_filt_azi = config['make_filter_intfs']['iono_filt_azi']
+        iono_dsamp = config['make_filter_intfs']['iono_dsamp']
+        iono_skip_est = config['make_filter_intfs']['iono_skip_est']
+        threshold_snaphu = config['unwrapping']['threshold_snaphu']
+        near_interp = config['unwrapping']['near_interp']
+        mask_water = config['unwrapping']['mask_water']
+        defomax = config['unwrapping']['defomax']
+        threshold_geocode = config['geocode']['threshold_geocode']
+        spec_div = config['ERS_processing'][SAT]['spec_div']
+        spec_mode = config['ERS_processing'][SAT]['spec_mode']
+        dec_factor = config['make_filter_intfs'][SAT]['dec_factor']
         shift_topo = config['make_topo_ra'][SAT]['shift_topo']
-    except KeyError:
-        shift_topo = 0  # FIXME: add to config file
-    switch_master = config['make_filter_intfs']['switch_master']
-    try:
-        filter_wavelength = config['make_filter_intfs'][SAT]['filter_wavelength']
-    except KeyError:
-        filter_wavelength = None
-    compute_phase_gradient = config['make_filter_intfs']['compute_phase_gradient']
-    correct_iono = config['make_filter_intfs']['correct_iono']
-    iono_filt_rng = config['make_filter_intfs']['iono_filt_rng']
-    iono_filt_azi = config['make_filter_intfs']['iono_filt_azi']
-    iono_dsamp = config['make_filter_intfs']['iono_dsamp']
-    iono_skip_est = config['make_filter_intfs']['iono_skip_est']
-    threshold_snaphu = config['unwrapping']['threshold_snaphu']
-    near_interp = config['unwrapping']['near_interp']
-    mask_water = config['unwrapping']['mask_water']
-    defomax = config['unwrapping']['defomax']
-    threshold_geocode = config['geocode']['threshold_geocode']
-    spec_div = config['ERS_processing']['S1_TOPS']['spec_div']
-    spec_mode = config['ERS_processing']['S1_TOPS']['spec_mode']
-    dec_factor = config['make_filter_intfs'][SAT]['dec_factor']
-    # FIXME: add defaults to config file
-    switch_land = -999
-    range_dec = config['make_filter_intfs'][SAT]['range_dec']  # TODO: add none defaults for other SAT params in config
-    azimuth_dec = config['make_filter_intfs'][SAT]['azimuth_dec']
-    try:
+        switch_land = -999  # FIXME: add defaults to config file
+        range_dec = config['make_filter_intfs'][SAT]['range_dec']
+        azimuth_dec = config['make_filter_intfs'][SAT]['azimuth_dec']
         SLC_factor = config['ERS_preprocessing'][SAT]['SLC_factor']
-    except KeyError:
-        SLC_factor = -999
-    print('P2P 0: proc_stage   =', proc_stage)  # NOTE: if these are defined in a class, class can have a function to export all values to logging module
+    print('P2P 0: proc_stage   =', proc_stage)
     print('P2P 0: skip_stage   =', skip_stage)
     print('P2P 0: skip_master  =', skip_master)
     print('P2P 0: num_patches  =', num_patches)

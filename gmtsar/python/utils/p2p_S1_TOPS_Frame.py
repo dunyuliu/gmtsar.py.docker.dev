@@ -112,11 +112,13 @@ def p2pS1TopsFrame():
        2017. Tectonic and Anthropogenic Deformation at the Cerro Prieto Geothermal ')
        Step-Over Revealed by Sentinel-1A InSAR. IEEE Transactions on Geoscience and Remote Sensing.')
     """
-    config = init_config()  # FIXME: Figure out where these variables are and which satelite they are for
-    correct_iono = config['make_filter_intfs']['correct_iono']
-    det_stitch = config['misc']['S1_TOPS']['det_stitch']
-    iono_filt_rng = config['make_filter_intfs']['iono_filt_rng']
-    iono_filt_azi = config['make_filter_intfs']['iono_filt_azi']
+    config = init_config()
+    if config:
+        correct_iono = config['make_filter_intfs']['correct_iono']
+        det_stitch = config['misc']['S1_TOPS']['det_stitch']
+        iono_filt_rng = config['make_filter_intfs']['iono_filt_rng']
+        iono_filt_azi = config['make_filter_intfs']['iono_filt_azi']
+        skip_master = config['processing_stage']['skip_master']
 
     def merge(skip_master, fmList, fsList):
         if skip_master != 2:
@@ -172,7 +174,6 @@ def p2pS1TopsFrame():
     print('P2P_S1_TOPS_FRAME: fmList is ', fmList)
     print('P2P_S1_TOPS_FRAME: fsList is ', fsList)
 
-    skip_master = config['processing_stage']['skip_master']
 
     linkFiles(0, masterSafe, masterEof, alignedSafe,
               alignedEof, fmList, fsList)

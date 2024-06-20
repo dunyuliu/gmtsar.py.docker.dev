@@ -74,39 +74,62 @@ ERS_processing:
   S1_TOPS:
     spec_div: 0
     spec_mode: 0
+    SLC_factor: -999
 
   ALOS_SLC:
     SLC_factor: 0.02
+    spec_div: 0
+    spec_mode: -999
 
   ALOS2:
     SLC_factor: 2.0
+    spec_div: 0
+    spec_mode: -999
 
   ALOS2_SCAN:
     SLC_factor: 2.0
+    spec_div: 0
+    spec_mode: -999
 
   RS2:
-    spec_div: -999
+    spec_div: 0
+    spec_mode: -999
+    SLC_factor: -999
 
   TSX:
-    spec_div: -999
+    spec_div: 0
+    spec_mode: -999
+    SLC_factor: -999
 
   CSK_RAW:
-    spec_div: -999
+    spec_div: 0
+    spec_mode: -999
+    SLC_factor: -999
 
   CSK_SLC:
-    spec_div: -999
+    spec_div: 0
+    spec_mode: -999
+    SLC_factor: -999
 
   S1_STRIP:
-    spec_div: -999
+    spec_div: 0
+    spec_mode: -999
+    SLC_factor: -999
 
   ERS:
-    spec_div: -999
+    spec_div: 0
+    spec_mode: -999
+    SLC_factor: -999
 
   ALOS:
-    spec_div: -999
+    spec_div: 0
+    spec_mode: -999
+    SLC_factor: -999
 
   ENVI:
-    spec_div: -999
+    spec_div: 0
+    spec_mode: -999
+    SLC_factor: -999
 
 
 # ---------------------------------- #
@@ -339,17 +362,18 @@ DEFAULT_CONFIG = {
                          'skip_3': 0, 'skip_4': 0, 'skip_5': 0, 'skip_6': 0, 'skip_master': 0},
     'preprocess': {'num_patches': -999, 'earth_radius': -999, 'near_range': -999, 'fd1': -999},
     'ERS_processing': {'S1_TOPS': {'spec_div': 0, 'spec_mode': 0},
-                       'ALOS_SLC': {'SLC_factor': 0.02},
-                       'ALOS2': {'SLC_factor': 2.0},
-                       'ALOS2_SCAN': {'SLC_factor': 2.0},
-                       'RS2': {'spec_div': -999}, 'TSX': {'spec_div': -999},
-                       'CSK_RAW': {'spec_div': -999},
-                       'CSK_SLC': {'spec_div': -999},
-                       'S1_STRIP': {'spec_div': -999},
-                       'ERS': {'spec_div': -999},
-                       'ALOS': {'spec_div': -999},
-                       'ENVI_SLC': {'spec_div': -999},
-                       'ENVI': {'spec_div': -999}},
+                       'ALOS_SLC': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': 0.02},
+                       'ALOS2': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': 2.0},
+                       'ALOS2_SCAN': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': 2.0},
+                       'RS2': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
+                       'TSX': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
+                       'CSK_RAW': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
+                       'CSK_SLC': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
+                       'S1_STRIP': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
+                       'ERS': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
+                       'ALOS': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
+                       'ENVI_SLC': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
+                       'ENVI': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999}},
     'SLC_align': {'region_cut': -999},
     'make_topo_ra': {'topo_phase': 1, 'topo_interp_mode': 0,
                      'ALOS_SLC': {'shift_topo': 1},
