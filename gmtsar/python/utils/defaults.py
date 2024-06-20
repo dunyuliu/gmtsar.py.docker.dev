@@ -131,6 +131,11 @@ ERS_processing:
     spec_mode: -999
     SLC_factor: -999
 
+  ENVI_SLC
+    spec_div: 0
+    spec_mode -999
+    SLC_factor: -999
+
 
 # ---------------------------------- #
 #  end parameters for ERS processing    #
