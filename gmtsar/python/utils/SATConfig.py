@@ -97,8 +97,7 @@ class SATConfig:
         """
         if not Path(filename).exists():
             print(
-                f'Configuration file {filename} not found, creating new \
-                configuration file {filename.split(".")[0]}.yaml'
+                f'Configuration file {filename} not found, creating new configuration file {filename.split(".")[0]}.yaml'
                 )
             self.write_commented_config(filename.split('.')[0] + '.yaml')
             filename = filename.split('.')[0] + '.yaml'
@@ -158,10 +157,11 @@ class SATConfig:
                     parsed_config[param] = config[path][param]
             else:
                 if SATConfig.SAT_PARAMS[param]:
+                    print(f'finding default[{path}][{self.sat}][{param}]')
                     parsed_config[param] = self.default_config[path][self.sat][param]
                 else:
                     parsed_config[param] = self.default_config[path][param]
-        if self.sat in ('S1_TOPS' 'ALOS2_SCAN'):
+        if self.sat == 'S1_TOPS' or self.sat == 'ALOS2_SCAN':
             if not det_stich:
                 parsed_config['det_stitch'] = self.default_config['misc'][self.sat]['det_stitch']
         return parsed_config

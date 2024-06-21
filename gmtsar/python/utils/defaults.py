@@ -366,7 +366,7 @@ DEFAULT_CONFIG = {
         'num_patches': -999, 'earth_radius': -999, 'near_range': -999, 'fd1': -999
         },
     'ERS_processing': {
-        'S1_TOPS': {'spec_div': 0, 'spec_mode': 0},
+        'S1_TOPS': {'spec_div': 0, 'spec_mode': 0, 'SLC_factor': -999},
         'ALOS_SLC': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': 0.02},
         'ALOS2': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': 2.0},
         'ALOS2_SCAN': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': 2.0},
