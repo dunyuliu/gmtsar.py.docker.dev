@@ -403,8 +403,7 @@ def P2P2FocusAlign(SAT, master, aligned, skip_master, iono):
 
 def P2P2RegionCut(master, aligned, skip_master, iono):
     config = init_config()  # TODO: Centralize to avoid number of I/O operations
-    if config:
-        region_cut = config['SLC_ALIGN']['region_cut']
+    region_cut = config['region_cut']
     print("P2P 2: region_cut !=-999 ")
     print("P2P 2: cutting SLC image to " + str(region_cut))
     if skip_master == 0 or skip_master == 2:
@@ -927,6 +926,8 @@ def p2p_processing(debug):
         range_dec = config['make_filter_intfs'][SAT]['range_dec']
         azimuth_dec = config['make_filter_intfs'][SAT]['azimuth_dec']
         SLC_factor = config['ERS_processing'][SAT]['SLC_factor']
+    print(globals())
+    print(f'proc_stage in p2p globals: {"proc_stage" in globals()}')
     print('P2P 0: proc_stage   =', proc_stage)
     print('P2P 0: skip_stage   =', skip_stage)
     print('P2P 0: skip_master  =', skip_master)

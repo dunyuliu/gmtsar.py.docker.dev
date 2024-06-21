@@ -13,31 +13,15 @@ file_shuttle
 import os
 import re
 import subprocess
-from make_config import write_commented_config, read_config, default_pyconfig
+from SATConfig import SATConfig
 
-def init_config():
+def init_config(sat, filename='config.yaml'):
     """
-    Initialize the config file. return the config dictionary.
+    Initialize a config parsing class and returns it.
     """
-    if os.path.exists('config.py'):
-        print('WARNING: using config.py is depreciated for security reasons. Please use config.yaml instead.')
-        return read_pyconfig()
-    if not os.path.exists('config.yaml'):
-        write_commented_config('config.yaml')
-        print('config.yaml is generated')
-    config = read_config('config.yaml')
+    config = SATConfig(sat)
+    config.read_config(filename)
     return config
-
-def read_pyconfig():
-    """
-    Reads the old config.py file rather than the new config.yaml file.
-    WARNING: this function is depreciated, as it uses 
-    exec() to run the config.py file. This is a security risk.
-    """
-    with open('config.py') as f:
-        exec(f.read(), globals())  # Execute the config file to load the variables and push them to the global scope
-        default_pyconfig()  # Set default values for any missing variables
-    return False  # Return False to indicate that the variables have been loaded and do not need to be read from a dict
 
 def check_file_report(fn):
     """
