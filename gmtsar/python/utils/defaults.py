@@ -177,6 +177,9 @@ make_topo_ra:
   ERS:
     shift_topo: 1
 
+  ENVI_SLC:
+    shift_topo: 0
+
   ALOS2:
     shift_topo: 0
 
@@ -391,6 +394,7 @@ DEFAULT_CONFIG = {
                      'CSK_RAW': {'shift_topo': 0},
                      'CSK_SLC': {'shift_topo': 0},
                      'TSX': {'shift_topo': 0},
+                     'ENVI_SLC': {'shift_topo': 0},
                      'RS2': {'shift_topo': 0}},
     'make_filter_intfs': {
         'switch_master': 0, 'switch_land': -999,

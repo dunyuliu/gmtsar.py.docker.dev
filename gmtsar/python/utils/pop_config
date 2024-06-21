@@ -152,7 +152,6 @@ def pop_config():  # FIXME: this function could open and write directly to the f
     else:
         shift_topo = 0
         print("shift_topo = 0")
-    print(" END Satellite specific parameters")
 
 
     print("")
@@ -175,7 +174,6 @@ def pop_config():  # FIXME: this function could open and write directly to the f
     print("# recommended range decimation to be 8, azimuth decimation to be 2")
 
 
-    print("START SATELEITE SECIFIC PARAMETERS")
     if SAT == "ALOS2_SCAN":
         filter_wavelength = 400
         print("filter_wavelength = 400")
@@ -186,8 +184,6 @@ def pop_config():  # FIXME: this function could open and write directly to the f
         filter_wavelength = 200
         print("filter_wavelength = 200")
     
-    print("END SATELLITE SPECIFIC PARAMETERS")
-
 
     print("")
     print("# decimation of images ")
@@ -197,7 +193,6 @@ def pop_config():  # FIXME: this function could open and write directly to the f
     print("# ")
 
 
-    print("START SATELLITE SPECIFIC PARAMETERS")
     if SAT == "RS2" or SAT == "TSX":
         dec_factor = 1
         print("dec_factor = 1 ")
@@ -219,7 +214,6 @@ def pop_config():  # FIXME: this function could open and write directly to the f
         print("range_dec = 4")
         print("azimuth_dec = 8")
 
-    print("END SATELLITE SPECIFIC PARAMETERS")
 
     print("#")
     print("# compute phase gradient, make decimation to 1 above and filter wavelength small for better quality")
@@ -281,14 +275,12 @@ def pop_config():  # FIXME: this function could open and write directly to the f
     print("#####################################")
     print("")
 
-    print("START SATELLITE SPECIFIC PARAMETERS")
 
     if SAT == "S1_TOPS" or SAT == "ALOS2_SCAN":
         print("# determine stitching location for TOPS and ALOS2SanSAR data using nan-s surrounding images from subswaths")
         det_stitch = 0
         print("det_stitch = 0")
 
-    print("END SATELLITE SPECIFIC PARAMETERS")
     sys.stdout.close()
 
 

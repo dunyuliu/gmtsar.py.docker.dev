@@ -999,7 +999,7 @@ def p2p_processing(debug):
         switch_land = -999  # FIXME: add defaults to config file
         range_dec = config['make_filter_intfs'][SAT]['range_dec']
         azimuth_dec = config['make_filter_intfs'][SAT]['azimuth_dec']
-        SLC_factor = config['ERS_preprocessing'][SAT]['SLC_factor']
+        SLC_factor = config['ERS_processing'][SAT]['SLC_factor']
     print('P2P 0: proc_stage   =', proc_stage)
     print('P2P 0: skip_stage   =', skip_stage)
     print('P2P 0: skip_master  =', skip_master)
