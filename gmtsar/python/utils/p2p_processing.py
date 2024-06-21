@@ -401,8 +401,7 @@ def P2P2FocusAlign(SAT, master, aligned, skip_master, iono):
             os.chdir("../SLC")
 
 
-def P2P2RegionCut(master, aligned, skip_master, iono):
-    config = init_config()  # TODO: Centralize to avoid number of I/O operations
+def P2P2RegionCut(master, aligned, skip_master, iono, config):
     region_cut = config['region_cut']
     print("P2P 2: region_cut !=-999 ")
     print("P2P 2: cutting SLC image to " + str(region_cut))
@@ -515,15 +514,14 @@ def switchMasterAligned(switch_master, master, aligned):
 
 
 def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, azimuth_dec,
-                                 dec, filt, compute_phase_gradient, iono, iono_dsamp):  # FIXME: use variable name other than 'filter' as it is a reserved keyword.
-    config = init_config()  # TODO: Centralize to avoid number of I/O operations
-    if config:
-        iono_skip_est = config['make_filter_intfs']['iono_skip_est']
-        mask_water = config['unwrapping']['mask_water']
-        # switch_land = config
-        iono_filt_rng = config['make_filter_intfs']['iono_filt_rng']
-        switch_land = -999  # FIXME: This should be in the config file
-        iono_filt_azi = config['make_filter_intfs']['iono_filt_azi']
+                                 dec, filt, compute_phase_gradient, iono, iono_dsamp, config):  # FIXME: use variable name other than 'filter' as it is a reserved keyword.
+
+    iono_skip_est = config['iono_skip_est']
+    mask_water = config['mask_water']
+    # switch_land = config
+    iono_filt_rng = config['iono_filt_rng']
+    switch_land = -999  # FIXME: This should be in the config file
+    iono_filt_azi = config['iono_filt_azi']
     print('P2P 4: start from make and filter interferograms')
     run('mkdir -p intf')  # FIXME: use os
     run('cleanup.py intf')
@@ -783,10 +781,8 @@ def getIntfSubDirName(ref, rep):
     return intfSubDirName
 
 
-def P2P5Unwrap(ref, rep, threshold_snaphu, mask_water, switch_land, near_interp):
-    config = init_config()  # TODO: Centralize to avoid number of I/O operations
-    if config:
-        defomax = config['unwrapping']['defomax']
+def P2P5Unwrap(ref, rep, threshold_snaphu, mask_water, switch_land, near_interp, config):
+    defomax = config['defomax']
     if threshold_snaphu != 0:
         print('P2P 5: threshold_snaphu != 0')
         print('P2P 5: entering intf/')
@@ -866,6 +862,7 @@ def p2p_processing(debug):
     if n != 4 and n != 5:
         print(p2p_processing.__doc__)
         sys.exit('ERROR: the number of arguments is not correct.')
+    config_file = sys.argv[4] if n == 5 else None
 
     print('P2P 0: the satellite is ', SAT)
     print('P2P 0: check if a customized configuration file config.py exists ... ...')
@@ -884,50 +881,48 @@ def p2p_processing(debug):
 
     print('P2P 0: read in parameters from the config.py ... ...')
     sys.path.insert(0, os.getcwd())
-    config = init_config()
-    if config:
-        proc_stage = config['processing_stage']['proc_stage']
-        skip_stage = config['processing_stage']['skip_stage']
-        skip_master = config['processing_stage']['skip_master']
-        skip_1 = config['processing_stage']['skip_1']
-        skip_2 = config['processing_stage']['skip_2']
-        skip_3 = config['processing_stage']['skip_3']
-        skip_4 = config['processing_stage']['skip_4']
-        skip_5 = config['processing_stage']['skip_5']
-        skip_6 = config['processing_stage']['skip_6']
-        num_patches = config['preprocess']['num_patches']
-        earth_radius = config['preprocess']['earth_radius']
-        near_range = config['preprocess']['near_range']
-        fd1 = config['preprocess']['fd1']
-        region_cut = config['SLC_align']['region_cut']
-        topo_phase = config['make_topo_ra']['topo_phase']
-        topo_interp_mode = config['make_topo_ra']['topo_interp_mode']
-        switch_master = config['make_filter_intfs']['switch_master']
-        try:
-            filter_wavelength = config['make_filter_intfs'][SAT]['filter_wavelength']
-        except KeyError:
-            filter_wavelength = None
-        compute_phase_gradient = config['make_filter_intfs']['compute_phase_gradient']
-        correct_iono = config['make_filter_intfs']['correct_iono']
-        iono_filt_rng = config['make_filter_intfs']['iono_filt_rng']
-        iono_filt_azi = config['make_filter_intfs']['iono_filt_azi']
-        iono_dsamp = config['make_filter_intfs']['iono_dsamp']
-        iono_skip_est = config['make_filter_intfs']['iono_skip_est']
-        threshold_snaphu = config['unwrapping']['threshold_snaphu']
-        near_interp = config['unwrapping']['near_interp']
-        mask_water = config['unwrapping']['mask_water']
-        defomax = config['unwrapping']['defomax']
-        threshold_geocode = config['geocode']['threshold_geocode']
-        spec_div = config['ERS_processing'][SAT]['spec_div']
-        spec_mode = config['ERS_processing'][SAT]['spec_mode']
-        dec_factor = config['make_filter_intfs'][SAT]['dec_factor']
-        shift_topo = config['make_topo_ra'][SAT]['shift_topo']
-        switch_land = -999  # FIXME: add defaults to config file
-        range_dec = config['make_filter_intfs'][SAT]['range_dec']
-        azimuth_dec = config['make_filter_intfs'][SAT]['azimuth_dec']
-        SLC_factor = config['ERS_processing'][SAT]['SLC_factor']
-    print(globals())
-    print(f'proc_stage in p2p globals: {"proc_stage" in globals()}')
+    if config_file:
+        config = init_config(SAT, config_file)
+    else:
+        config = init_config(SAT)
+    proc_stage = config['proc_stage']
+    skip_stage = config['skip_stage']
+    skip_master = config['skip_master']
+    skip_1 = config['skip_1']
+    skip_2 = config['skip_2']
+    skip_3 = config['skip_3']
+    skip_4 = config['skip_4']
+    skip_5 = config['skip_5']
+    skip_6 = config['skip_6']
+    num_patches = config['num_patches']
+    earth_radius = config['earth_radius']
+    near_range = config['near_range']
+    fd1 = config['fd1']
+    region_cut = config['region_cut']
+    topo_phase = config['topo_phase']
+    topo_interp_mode = config['topo_interp_mode']
+    switch_master = config['switch_master']
+    filter_wavelength = config['filter_wavelength']
+    compute_phase_gradient = config['compute_phase_gradient']
+    correct_iono = config['correct_iono']
+    iono_filt_rng = config['iono_filt_rng']
+    iono_filt_azi = config['iono_filt_azi']
+    iono_dsamp = config['iono_dsamp']
+    iono_skip_est = config['iono_skip_est']
+    threshold_snaphu = config['threshold_snaphu']
+    near_interp = config['near_interp']
+    mask_water = config['mask_water']
+    defomax = config['defomax']
+    threshold_geocode = config['threshold_geocode']
+    spec_div = config['spec_div']
+    spec_mode = config['spec_mode']
+    dec_factor = config['dec_factor']
+    shift_topo = config['shift_topo']
+    range_dec = config['range_dec']
+    azimuth_dec = config['azimuth_dec']
+    SLC_factor = config['SLC_factor']
+    switch_land = config['switch_land']
+
     print('P2P 0: proc_stage   =', proc_stage)
     print('P2P 0: skip_stage   =', skip_stage)
     print('P2P 0: skip_master  =', skip_master)
@@ -1030,7 +1025,7 @@ def p2p_processing(debug):
         os.chdir('SLC')
         P2P2FocusAlign(SAT, master, aligned, skip_master, iono)
         if region_cut != -999:
-            P2P2RegionCut(master, aligned, skip_master, iono)
+            P2P2RegionCut(master, aligned, skip_master, iono, config)
         os.chdir('..')
         print('P2P 2: ALIGN.CSH - END')
     if debug == 1:
@@ -1045,13 +1040,13 @@ def p2p_processing(debug):
 
     if stage <= 4 and skip_4 == 0:
         P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, azimuth_dec,
-                                     dec, filt, compute_phase_gradient, iono, iono_dsamp)
+                                     dec, filt, compute_phase_gradient, iono, iono_dsamp, config)
     if debug == 1:
         input('Press Enter to continue to Phase 5...')
 
     if stage <= 5 and skip_5 == 0:
         P2P5Unwrap(ref, rep, threshold_snaphu,
-                   mask_water, switch_land, near_interp)
+                   mask_water, switch_land, near_interp, config)
     if debug == 1:
         input('Press Enter to continue to Phase 6...')
 
