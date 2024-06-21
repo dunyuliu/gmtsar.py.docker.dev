@@ -55,15 +55,16 @@ def default_pyconfig():
     Sets default values for the parameters that are sometimes missing from the normal
     config file.
     """
-    dummy_vars = ['spec_div', 'spec_mode', 'switch_land', 'range_dec', 'azimuth_dec', 'SLC_factor', 'shift_topo']
+    dummy_vars = ['spec_div', 'spec_mode', 'switch_land', 'range_dec', 'azimuth_dec', 'SLC_factor', 'shift_topo', 'proc_stage']
     defaults = {
         'spec_div': 0,
         'spec_mode': -999,
-        'swtich_land': -999, 
+        'switch_land': -999, 
         'range_dec': -999,
         'azimuth_dec': -999,
         'SLC_factor': -999,
-        'shift_topo': 0
+        'shift_topo': 0,
+        'proc_stage': 1
     }
     for i in dummy_vars:
         if i not in globals():
