@@ -16,86 +16,53 @@ import shutil
 from gmtsar_lib import *
 
 
-def P2P1Preprocess(SAT, master, aligned, skip_master, cmdAppendix):
+def P2P1Preprocess(SAT: str, master, aligned, skip_master, cmdAppendix):
 
     print('P2P 1: PREPROCESS - START')
     print('P2P 1: Processing images '+master+' '+aligned)
 
-    if SAT == "ALOS" or SAT == "ALOS2" or SAT == "ALOS_SLC" or SAT == "ALOS_SCAN":
-        if check_file_report("raw/"+master) is False:
-            sys.exit()
-        if check_file_report("raw/"+aligned) is False:
-            sys.exit()
-    elif SAT == "ENVI_SLC":
-        if check_file_report("raw/"+master+".N1") is False and \
-           check_file_report("raw/"+master+".E1") is False and \
-           check_file_report("raw/"+master+".E2") is False:
-            print(" no file raw/" + master)
-            sys.exit()
-        if check_file_report("raw/"+aligned+".N1") is False and \
-           check_file_report("raw/"+aligned+".E1") is False and \
-           check_file_report("raw/"+aligned+".E2") is False:
-            print(" no file raw/" + aligned)
-            sys.exit()
-    elif SAT == "ERS":
-        if check_file_report("raw/"+master+".dat") is False:
-            print(" no file raw/" + master + ".dat")
-            sys.exit()
-        if check_file_report("raw/"+aligned+".dat") is False:
-            print(" no file raw/" + aligned + ".dat")
-            sys.exit()
-        if check_file_report("raw/"+master+".ldr") is False:
-            print(" no file raw/" + master + ".ldr")
-            sys.exit()
-        fn = "raw/"+aligned+".ldr"
-        if check_file_report(fn) is False:
-            print(" no file " + fn)
-            sys.exit()
-    elif SAT == "ENVI":
-        check_file_report("raw/"+master+".baq")
-        check_file_report("raw/"+aligned+".baq")
-    elif SAT == "S1_STRIP" or SAT == "S1_TOPS":
-        check_file_report("raw/" + master + ".xml")
-        check_file_report("raw/" + master + ".tiff")
-        check_file_report("raw/" + aligned + ".xml")
-        check_file_report("raw/" + aligned + ".tiff")
-        if SAT == "S1_TOPS":
-            check_file_report("raw/" + master + ".EOF")
-            check_file_report("raw/" + aligned + ".EOF")
-    elif SAT == "CSK_RAW" or SAT == "CSK_SLC":
-        check_file_report("raw/" + master + ".h5")
-        check_file_report("raw/" + aligned + ".h5")
-    elif SAT == "RS2":
-        check_file_report("raw/" + master + ".xml")
-        check_file_report("raw/" + master + ".tif")
-        check_file_report("raw/" + aligned + ".xml")
-        check_file_report("raw/" + aligned + ".xml")
-    elif SAT == "TSX":
-        check_file_report("raw/" + master + ".xml")
-        check_file_report("raw/" + aligned + ".xml")
-        check_file_report("raw/" + master + ".cos")
-        check_file_report("raw/" + aligned + ".cos")
-    elif SAT == "GF3":
-        check_file_report("raw/" + master + ".xml")
-        check_file_report("raw/" + aligned + ".xml")
+    def assert_existence(file):
+        """
+        checks to ensure the existence of a critical processing file
+        and raises an exception if it does not exist.
+        """
+        if not os.path.exists(f'raw/{file}'):
+            raise FileNotFoundError(f"File raw/{file} not found.")
 
-        check_file_report("raw/" + master + ".tiff")
-        check_file_report("raw/" + aligned + ".tiff")
+    needed_files = {  # Dictionary of files needed for each satellite
+        'ALOS': [''],
+        'ENVI_SLC': ['.N1', '.E1', '.E2'],
+        'ERS': ['.dat', '.ldr'],
+        'CSK': ['.h5'],
+        'RS2': ['.xml', '.tif'],
+        'TSX': ['.xml', '.cos'],
+        'GF3': ['.xml', '.tiff'],
+        'S1_TOPS': ['.xml', '.tiff', '.EOF'],
+        'S1_STRIP': ['.xml', '.tiff'],
+        'ENVI': ['.baq']
+        }
+    check = 'ALOS' if SAT.startswith('ALOS') else SAT
+    check = 'CSK' if SAT.startswith('CSK') else check
+    files = needed_files.get(check, False)
+    envi_or = SAT == 'ENVI_SLC'
+    if files and not envi_or:  # if files are critical, check for their existence based on the satellite
+        for file in files:
+            assert_existence(master + file)
+            assert_existence(aligned + file)
+    elif envi_or:  # if the satellite is ENVI_SLC, any one set of the file extensions is sufficient
+        exist = [os.path.exists(f'raw/{master}{file}') and os.path.exists(f'raw/{aligned}{file}') for file in files]
+        if not any(exist):
+            raise FileNotFoundError(f"Files raw/{master} and raw/{aligned} not found.")
+    if SAT == 'S1_TOPS':  # Rename master and aligned files for S1_TOPS, if necessary
+        file_master, file_aligned = renameMasterAlignedForS1tops(master, aligned)
+    else:
+        file_master, file_aligned = master, aligned
 
-    if SAT == 'S1_TOPS':  # FIXME: multiple If statements can be combined. Why seperate?
-        master, aligned = renameMasterAlignedForS1tops(master, aligned)
-    # FIXME: may be better to nest if statements for better readability.
-    if skip_master == 0 or skip_master == 2:
-        run("rm -f raw/" + master + ".PRM*")
-        run("rm -f raw/" + master + ".SLC")
-        run("rm -f raw/" + master + ".LED")
-    if skip_master == 0 or skip_master == 1:
-        run("rm -f raw/" + aligned + ".PRM*")
-        run("rm -f raw/" + aligned + ".SLC")
-        run("rm -f raw/" + aligned + ".LED")
-    if SAT == "S1_TOPS":  # FIXME: reading variables in from command line
-        master = sys.argv[2]
-        aligned = sys.argv[3]
+    for ext in ['.PRM', '.SLC', '.LED']:  # Remove existing files if necessary
+        if skip_master in [0, 2]:
+            run(f'rm -f raw/{file_master}{ext}')
+        if skip_master in [0, 1]:
+            run(f'rm -f raw/{file_aligned}{ext}')
 
     os.chdir("raw")  # cd raw") didn't work.
     os.system('pwd')
@@ -107,71 +74,37 @@ def P2P1Preprocess(SAT, master, aligned, skip_master, cmdAppendix):
     print('P2P 1: PREPROCESS - END')
 
 
-# FIXME: SAT is never used in this function.
+
 def P2P2Clean(master, aligned, skip_master, iono):
 
     print('P2P 2: if stage<=2 and skip_2 == 0')
-
-    # FIXME: split if statements for better readability.
-    if skip_master == 0 or skip_master == 2:
-        print(" ")
-        print(" if skip_master == 0 or 2")
-        print(" ")
-        run("rm -f SLC/" + master + ".PRM*")
-        run("rm -f SLC/" + master + ".SLC")
-        run("rm -f SLC/" + master + ".LED")
-    if skip_master == 0 or skip_master == 1:
-        print(" ")
-        print(" if skip_master == 0 or 1")
-        print(" ")
-        run("rm -f SLC/" + aligned + ".PRM*")
-        run("rm -f SLC/" + aligned + ".SLC")
-        run("rm -f SLC/" + aligned + ".LED")
-    if iono == 1:
-        print(" ")
-        print(" if iono == 1 and then check skip_master")
-        print(" ")
-        if skip_master == 0 or skip_master == 2:  # FIXME: add variables to replace command line arguments
-            run("rm -f SLC/" + sys.argv[2] + ".tiff")
-            run("rm -f SLC/" + sys.argv[2] + ".xml")
-            run("rm -f SLC/" + sys.argv[2] + ".EOF")
-
-            run("rm -f SLC_L/" + master + ".PRM*")
-            run("rm -f SLC_L/" + master + ".SLC")
-            run("rm -f SLC_L/" + master + ".LED")
-
-            run("rm -f SLC_L/" + sys.argv[2] + ".tiff")
-            run("rm -f SLC_L/" + sys.argv[2] + ".xml")
-            run("rm -f SLC_L/" + sys.argv[2] + ".EOF")
-
-            run("rm -f SLC_H/" + master + ".PRM*")
-            run("rm -f SLC_H/" + master + ".SLC")
-            run("rm -f SLC_H/" + master + ".LED")
-
-            run("rm -f SLC_H/" + sys.argv[2] + ".tiff")
-            run("rm -f SLC_H/" + sys.argv[2] + ".xml")
-            run("rm -f SLC_H/" + sys.argv[2] + ".EOF")
-
-        if skip_master == 0 or skip_master == 1:
-            run("rm -f SLC/" + sys.argv[3] + ".tiff")
-            run("rm -f SLC/" + sys.argv[3] + ".xml")
-            run("rm -f SLC/" + sys.argv[3] + ".EOF")
-
-            run("rm -f SLC_L/" + aligned + ".PRM*")
-            run("rm -f SLC_L/" + aligned + ".SLC")
-            run("rm -f SLC_L/" + aligned + ".LED")
-
-            run("rm -f SLC_L/" + sys.argv[3] + ".tiff")
-            run("rm -f SLC_L/" + sys.argv[3] + ".xml")
-            run("rm -f SLC_L/" + sys.argv[3] + ".EOF")
-
-            run("rm -f SLC_H/" + aligned + ".PRM*")
-            run("rm -f SLC_H/" + aligned + ".SLC")
-            run("rm -f SLC_H/" + aligned + ".LED")
-
-            run("rm -f SLC_H/" + sys.argv[3] + ".tiff")
-            run("rm -f SLC_H/" + sys.argv[3] + ".xml")
-            run("rm -f SLC_H/" + sys.argv[3] + ".EOF")
+    arg2 = sys.argv[2]  # TODO: replace with variable name
+    arg3 = sys.argv[3]  # TODO: replace with variable name
+    argv_extentions = ['tiff', 'xml', 'EOF']
+    tertiaty_extentions = ['PRM*', 'SLC', 'LED']
+    directories = ['SLC', 'SLC_L', 'SLC_H']
+    if skip_master != 0:  # Check if skip_master is not 0
+        iono_check = iono == 1
+        mapping = {  # Define a mapping for the different cases
+            (1, True): (aligned, arg3),
+            (1, False): (aligned, None),
+            (2, True): (master, arg2),
+            (2, False): (master, None),
+        }
+        pairs = mapping[(skip_master, iono_check)]
+        for directory in directories:  # Iterate over the combinations and remove the files
+            for index in range(3):
+                run(f"rm -f {directory}/{pairs[0]}.{tertiaty_extentions[index]}")
+                if pairs[1]:
+                    run(f"rm -f {directory}/{pairs[1]}.{argv_extentions[index]}")
+    else:  # If skip_master is 0, remove all files
+        for directory in directories:
+            for index in range(3):
+                run(f"rm -f {directory}/{master}.{tertiaty_extentions[index]}")
+                run(f"rm -f {directory}/{aligned}.{tertiaty_extentions[index]}")
+                if iono == 1:
+                    run(f"rm -f {directory}/{arg2}.{argv_extentions[index]}")
+                    run(f"rm -f {directory}/{arg3}.{argv_extentions[index]}")
 
 
 def P2P2FocusAlign(SAT, master, aligned, skip_master, iono):
@@ -472,10 +405,8 @@ def P2P2FocusAlign(SAT, master, aligned, skip_master, iono):
             os.chdir("../SLC")
 
 
-def P2P2RegionCut(master, aligned, skip_master, iono):
-    config = init_config()  # TODO: Centralize to avoid number of I/O operations
-    if config:
-        region_cut = config['SLC_ALIGN']['region_cut']
+def P2P2RegionCut(master, aligned, skip_master, iono, config):
+    region_cut = config['region_cut']
     print("P2P 2: region_cut !=-999 ")
     print("P2P 2: cutting SLC image to " + str(region_cut))
     if skip_master == 0 or skip_master == 2:
@@ -514,7 +445,6 @@ def P2P2RegionCut(master, aligned, skip_master, iono):
             file_shuttle("junk2.SLC", master+".SLC", "mv")
 
 
-# FIXME: aligned is never used in this function.
 def P2P3MakeTopo(master, topo_phase, topo_interp_mode, shift_topo):
     print('P2P 3: start from make topo_ra')
     run("cleanup.py topo")
@@ -548,7 +478,6 @@ def P2P3MakeTopo(master, topo_phase, topo_interp_mode, shift_topo):
             print('P2P 3: OFFSET_TOPO - START')
             print('P2P 3: entering directory SLC/')
             os.chdir('SLC')
-            # FIXME: rng_samp_rate is never used.
             grdinfo("../topo/topo_ra.grd > tmp.txt")
             rng = grep_value("tmp.txt", "x_inc", 7)
             slc2amp_csh(master+'.PRM '+str(rng)+' amp-'+master+'.grd') # TODO: This should invoke the python verson of slc2amp
@@ -589,15 +518,14 @@ def switchMasterAligned(switch_master, master, aligned):
 
 
 def P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, azimuth_dec,
-                                 dec, filt, compute_phase_gradient, iono, iono_dsamp):  # FIXME: use variable name other than 'filter' as it is a reserved keyword.
-    config = init_config()  # TODO: Centralize to avoid number of I/O operations
-    if config:
-        iono_skip_est = config['make_filter_intfs']['iono_skip_est']
-        mask_water = config['unwrapping']['mask_water']
-        # switch_land = config
-        iono_filt_rng = config['make_filter_intfs']['iono_filt_rng']
-        switch_land = -999  # FIXME: This should be in the config file
-        iono_filt_azi = config['make_filter_intfs']['iono_filt_azi']
+                                 dec, filt, compute_phase_gradient, iono, iono_dsamp, config):  # FIXME: use variable name other than 'filter' as it is a reserved keyword.
+
+    iono_skip_est = config['iono_skip_est']
+    mask_water = config['mask_water']
+    # switch_land = config
+    iono_filt_rng = config['iono_filt_rng']
+    switch_land = -999  # FIXME: This should be in the config file
+    iono_filt_azi = config['iono_filt_azi']
     print('P2P 4: start from make and filter interferograms')
     run('mkdir -p intf')  # FIXME: use os
     run('cleanup.py intf')
@@ -857,10 +785,8 @@ def getIntfSubDirName(ref, rep):
     return intfSubDirName
 
 
-def P2P5Unwrap(ref, rep, threshold_snaphu, mask_water, switch_land, near_interp):
-    config = init_config()  # TODO: Centralize to avoid number of I/O operations
-    if config:
-        defomax = config['unwrapping']['defomax']
+def P2P5Unwrap(ref, rep, threshold_snaphu, mask_water, switch_land, near_interp, config):
+    defomax = config['defomax']
     if threshold_snaphu != 0:
         print('P2P 5: threshold_snaphu != 0')
         print('P2P 5: entering intf/')
@@ -940,6 +866,7 @@ def p2p_processing(debug):
     if n != 4 and n != 5:
         print(p2p_processing.__doc__)
         sys.exit('ERROR: the number of arguments is not correct.')
+    config_file = sys.argv[4] if n == 5 else None
 
     print('P2P 0: the satellite is ', SAT)
     print('P2P 0: check if a customized configuration file config.py exists ... ...')
@@ -958,48 +885,48 @@ def p2p_processing(debug):
 
     print('P2P 0: read in parameters from the config.py ... ...')
     sys.path.insert(0, os.getcwd())
-    config = init_config()
-    if config:
-        proc_stage = config['processing_stage']['proc_stage']
-        skip_stage = config['processing_stage']['skip_stage']
-        skip_master = config['processing_stage']['skip_master']
-        skip_1 = config['processing_stage']['skip_1']
-        skip_2 = config['processing_stage']['skip_2']
-        skip_3 = config['processing_stage']['skip_3']
-        skip_4 = config['processing_stage']['skip_4']
-        skip_5 = config['processing_stage']['skip_5']
-        skip_6 = config['processing_stage']['skip_6']
-        num_patches = config['preprocess']['num_patches']
-        earth_radius = config['preprocess']['earth_radius']
-        near_range = config['preprocess']['near_range']
-        fd1 = config['preprocess']['fd1']
-        region_cut = config['SLC_align']['region_cut']
-        topo_phase = config['make_topo_ra']['topo_phase']
-        topo_interp_mode = config['make_topo_ra']['topo_interp_mode']
-        switch_master = config['make_filter_intfs']['switch_master']
-        try:
-            filter_wavelength = config['make_filter_intfs'][SAT]['filter_wavelength']
-        except KeyError:
-            filter_wavelength = None
-        compute_phase_gradient = config['make_filter_intfs']['compute_phase_gradient']
-        correct_iono = config['make_filter_intfs']['correct_iono']
-        iono_filt_rng = config['make_filter_intfs']['iono_filt_rng']
-        iono_filt_azi = config['make_filter_intfs']['iono_filt_azi']
-        iono_dsamp = config['make_filter_intfs']['iono_dsamp']
-        iono_skip_est = config['make_filter_intfs']['iono_skip_est']
-        threshold_snaphu = config['unwrapping']['threshold_snaphu']
-        near_interp = config['unwrapping']['near_interp']
-        mask_water = config['unwrapping']['mask_water']
-        defomax = config['unwrapping']['defomax']
-        threshold_geocode = config['geocode']['threshold_geocode']
-        spec_div = config['ERS_processing'][SAT]['spec_div']
-        spec_mode = config['ERS_processing'][SAT]['spec_mode']
-        dec_factor = config['make_filter_intfs'][SAT]['dec_factor']
-        shift_topo = config['make_topo_ra'][SAT]['shift_topo']
-        switch_land = -999  # FIXME: add defaults to config file
-        range_dec = config['make_filter_intfs'][SAT]['range_dec']
-        azimuth_dec = config['make_filter_intfs'][SAT]['azimuth_dec']
-        SLC_factor = config['ERS_processing'][SAT]['SLC_factor']
+    if config_file:
+        config = init_config(SAT, config_file)
+    else:
+        config = init_config(SAT)
+    proc_stage = config['proc_stage']
+    skip_stage = config['skip_stage']
+    skip_master = config['skip_master']
+    skip_1 = config['skip_1']
+    skip_2 = config['skip_2']
+    skip_3 = config['skip_3']
+    skip_4 = config['skip_4']
+    skip_5 = config['skip_5']
+    skip_6 = config['skip_6']
+    num_patches = config['num_patches']
+    earth_radius = config['earth_radius']
+    near_range = config['near_range']
+    fd1 = config['fd1']
+    region_cut = config['region_cut']
+    topo_phase = config['topo_phase']
+    topo_interp_mode = config['topo_interp_mode']
+    switch_master = config['switch_master']
+    filter_wavelength = config['filter_wavelength']
+    compute_phase_gradient = config['compute_phase_gradient']
+    correct_iono = config['correct_iono']
+    iono_filt_rng = config['iono_filt_rng']
+    iono_filt_azi = config['iono_filt_azi']
+    iono_dsamp = config['iono_dsamp']
+    iono_skip_est = config['iono_skip_est']
+    threshold_snaphu = config['threshold_snaphu']
+    near_interp = config['near_interp']
+    mask_water = config['mask_water']
+    defomax = config['defomax']
+    threshold_geocode = config['threshold_geocode']
+    spec_div = config['spec_div']
+    spec_mode = config['spec_mode']
+    dec_factor = config['dec_factor']
+    shift_topo = config['shift_topo']
+    range_dec = config['range_dec']
+    azimuth_dec = config['azimuth_dec']
+    SLC_factor = config['SLC_factor']
+    switch_land = config['switch_land']
+
     print('P2P 0: proc_stage   =', proc_stage)
     print('P2P 0: skip_stage   =', skip_stage)
     print('P2P 0: skip_master  =', skip_master)
@@ -1102,7 +1029,7 @@ def p2p_processing(debug):
         os.chdir('SLC')
         P2P2FocusAlign(SAT, master, aligned, skip_master, iono)
         if region_cut != -999:
-            P2P2RegionCut(master, aligned, skip_master, iono)
+            P2P2RegionCut(master, aligned, skip_master, iono, config)
         os.chdir('..')
         print('P2P 2: ALIGN.CSH - END')
     if debug == 1:
@@ -1117,13 +1044,13 @@ def p2p_processing(debug):
 
     if stage <= 4 and skip_4 == 0:
         P2P4MakeFilterInterferograms(ref, rep, topo_phase, shift_topo, range_dec, azimuth_dec,
-                                     dec, filt, compute_phase_gradient, iono, iono_dsamp)
+                                     dec, filt, compute_phase_gradient, iono, iono_dsamp, config)
     if debug == 1:
         input('Press Enter to continue to Phase 5...')
 
     if stage <= 5 and skip_5 == 0:
         P2P5Unwrap(ref, rep, threshold_snaphu,
-                   mask_water, switch_land, near_interp)
+                   mask_water, switch_land, near_interp, config)
     if debug == 1:
         input('Press Enter to continue to Phase 6...')
 
