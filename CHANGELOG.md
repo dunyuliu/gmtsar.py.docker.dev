@@ -1,0 +1,10 @@
+- 2024-06-25 - Fixed remaining testing system errors - now passes testing system with yaml and .py configs
+- 2024-06-21 - Centralized usage of the config file
+- 2024-06-21 - Added class to work with config parameters
+- 2024-06-20 - changed config to work with old python version
+- 2024-06-19 - removed unused statements and imports
+- 2024-06-02 - Basic logic improvements in many if statements, condensing code and centralizing behavior determination
+- 2024-06-01 - Started working with Yaml config files in all scripts requiring configuration. TODO and FIXME added, many of which have not been addressed
+- 2024-06-01 - Added wrapper functions and py extentions
+- 2024-05-26 - midified command line function calls to have wrapper functions
+- 2024-05-18 - Fixed documentation formating

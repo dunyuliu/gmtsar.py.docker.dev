@@ -203,6 +203,12 @@ make_topo_ra:
 
   RS2:
     shift_topo: 0
+
+  ENVI_SLC:
+    shift_topo: 0
+  
+  ENVI:
+    shift_topo: 0
 # END Satellite specific parameters
 
 make_filter_intfs:
@@ -366,36 +372,47 @@ misc:
     det_stitch: 0
 """
 DEFAULT_CONFIG = {
-    'processing_stage': {'proc_stage': 1, 'skip_stage': -999, 'skip_1': 0, 'skip_2': 0,
-                         'skip_3': 0, 'skip_4': 0, 'skip_5': 0, 'skip_6': 0, 'skip_master': 0},
-    'preprocess': {'num_patches': -999, 'earth_radius': -999, 'near_range': -999, 'fd1': -999},
-    'ERS_processing': {'S1_TOPS': {'spec_div': 0, 'spec_mode': 0},
-                       'ALOS_SLC': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': 0.02},
-                       'ALOS2': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': 2.0},
-                       'ALOS2_SCAN': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': 2.0},
-                       'RS2': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
-                       'TSX': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
-                       'CSK_RAW': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
-                       'CSK_SLC': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
-                       'S1_STRIP': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
-                       'ERS': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
-                       'ALOS': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
-                       'ENVI_SLC': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
-                       'ENVI': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999}},
-    'SLC_align': {'region_cut': -999},
-    'make_topo_ra': {'topo_phase': 1, 'topo_interp_mode': 0,
-                     'ALOS_SLC': {'shift_topo': 1},
-                     'ALOS': {'shift_topo': 1},
-                     'ERS': {'shift_topo': 1},
-                     'ALOS2': {'shift_topo': 0},
-                     'ALOS2_SCAN': {'shift_topo': 0},
-                     'S1_STRIP': {'shift_topo': 0},
-                     'S1_TOPS': {'shift_topo': 0},
-                     'CSK_RAW': {'shift_topo': 0},
-                     'CSK_SLC': {'shift_topo': 0},
-                     'TSX': {'shift_topo': 0},
-                     'ENVI_SLC': {'shift_topo': 0},
-                     'RS2': {'shift_topo': 0}},
+    'processing_stage': {
+        'proc_stage': 1, 'skip_stage': -999, 'skip_1': 0, 'skip_2': 0,
+        'skip_3': 0, 'skip_4': 0, 'skip_5': 0, 'skip_6': 0, 'skip_master': 0
+        },
+    'preprocess': {
+        'num_patches': -999, 'earth_radius': -999, 'near_range': -999, 'fd1': -999
+        },
+    'ERS_processing': {
+        'S1_TOPS': {'spec_div': 0, 'spec_mode': 0, 'SLC_factor': -999},
+        'ALOS_SLC': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': 0.02},
+        'ALOS2': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': 2.0},
+        'ALOS2_SCAN': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': 2.0},
+        'RS2': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
+        'TSX': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
+        'CSK_RAW': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
+        'CSK_SLC': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
+        'S1_STRIP': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
+        'ERS': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
+        'ALOS': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
+        'ENVI_SLC': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999},
+        'ENVI': {'spec_div': 0, 'spec_mode': -999, 'SLC_factor': -999}
+        },
+    'SLC_align': {
+        'region_cut': -999
+        },
+    'make_topo_ra': {
+        'topo_phase': 1, 'topo_interp_mode': 0,
+        'ALOS_SLC': {'shift_topo': 1},
+        'ALOS': {'shift_topo': 1},
+        'ERS': {'shift_topo': 1},
+        'ALOS2': {'shift_topo': 0},
+        'ALOS2_SCAN': {'shift_topo': 0},
+        'S1_STRIP': {'shift_topo': 0},
+        'S1_TOPS': {'shift_topo': 0},
+        'CSK_RAW': {'shift_topo': 0},
+        'CSK_SLC': {'shift_topo': 0},
+        'TSX': {'shift_topo': 0},
+        'ENVI_SLC': {'shift_topo': 0},
+        'RS2': {'shift_topo': 0},
+        'ENVI': {'shift_topo': 0}
+        },
     'make_filter_intfs': {
         'switch_master': 0, 'switch_land': -999,
         'ALOS2_SCAN': {'filter_wavelength': 400, 'dec_factor': 4, 'range_dec': 4, 'azimuth_dec': 8},
@@ -412,8 +429,15 @@ DEFAULT_CONFIG = {
         'ALOS_SLC': {'filter_wavelength': 200, 'dec_factor': 2, 'range_dec': -999, 'azimuth_dec': -999},
         'ALOS2': {'filter_wavelength': 200, 'dec_factor': 2, 'range_dec': -999, 'azimuth_dec': -999},
         'compute_phase_gradient': 0, 'correct_iono': 0, 'iono_filt_rng': 1.0,
-        'iono_filt_azi': 1.0, 'iono_dsamp': 1, 'iono_skip_est': 1},
-    'unwrapping': {'threshold_snaphu': 0, 'near_interp': 0, 'mask_water': 1, 'defomax': 0},
-    'geocode': {'threshold_geocode': 0.1},
-    'misc': {'S1_TOPS': {'det_stitch': 0}, 'ALOS2_SCAN': {'det_stitch': 0}}
+        'iono_filt_azi': 1.0, 'iono_dsamp': 1, 'iono_skip_est': 1
+        },
+    'unwrapping': {
+        'threshold_snaphu': 0, 'near_interp': 0, 'mask_water': 1, 'defomax': 0
+        },
+    'geocode': {
+        'threshold_geocode': 0.1
+        },
+    'misc': {
+        'S1_TOPS': {'det_stitch': 0}, 'ALOS2_SCAN': {'det_stitch': 0}
+        }
     }

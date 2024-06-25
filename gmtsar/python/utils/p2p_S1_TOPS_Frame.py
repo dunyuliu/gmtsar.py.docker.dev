@@ -99,9 +99,9 @@ def mergeUnwrapGeocodeTops(correct_iono, det_stitch):  # TODO: encorperate into 
 
 def p2pS1TopsFrame():
     """
-    Usage: p2p_S1_TOPS_Frame.csh Master.SAFE Master.EOF Aligned.SAFE Aligned.EOF config.s1a.txt polarization parallel')
+    Usage: p2p_S1_TOPS_Frame.py Master.SAFE Master.EOF Aligned.SAFE Aligned.EOF config.s1a.txt polarization parallel')
 
-    Example: p2p_S1_TOPS_Frame.csh S1A_IW_SLC__1SDV_20150607T014936_20150607T015003_006261_00832E_3626.SAFE S1A_OPER_AUX_POEORB_OPOD_20150615T155109_V20150525T225944_20150527T005944.EOF S1A_IW_SLC__1SSV_20150526T014935_20150526T015002_006086_007E23_679A.SAFE S1A_OPER_AUX_POEORB_OPOD_20150627T155155_V20150606T225944_20150608T005944.EOF config.s1a.txt vv 1')
+    Example: p2p_S1_TOPS_Frame.py S1A_IW_SLC__1SDV_20150607T014936_20150607T015003_006261_00832E_3626.SAFE S1A_OPER_AUX_POEORB_OPOD_20150615T155109_V20150525T225944_20150527T005944.EOF S1A_IW_SLC__1SSV_20150526T014935_20150526T015002_006086_007E23_679A.SAFE S1A_OPER_AUX_POEORB_OPOD_20150627T155155_V20150606T225944_20150608T005944.EOF config.s1a.txt vv 1')
     Place the .SAFE file in the raw folder, DEM in the topo folder.')
     During processing, F1, F2, F3 and merge folder will be generated.')
     Final results will be placed in the merge folder, with phase.')
@@ -112,13 +112,13 @@ def p2pS1TopsFrame():
        2017. Tectonic and Anthropogenic Deformation at the Cerro Prieto Geothermal ')
        Step-Over Revealed by Sentinel-1A InSAR. IEEE Transactions on Geoscience and Remote Sensing.')
     """
-    config = init_config()
-    if config:
-        correct_iono = config['make_filter_intfs']['correct_iono']
-        det_stitch = config['misc']['S1_TOPS']['det_stitch']
-        iono_filt_rng = config['make_filter_intfs']['iono_filt_rng']
-        iono_filt_azi = config['make_filter_intfs']['iono_filt_azi']
-        skip_master = config['processing_stage']['skip_master']
+    config_file = sys.argv[5]
+    config = init_config('S1_TOPS', config_file)
+    correct_iono = config['correct_iono']
+    det_stitch = config['det_stitch']
+    iono_filt_rng = config['iono_filt_rng']
+    iono_filt_azi = config['iono_filt_azi']
+    skip_master = config['skip_master']
 
     def merge(skip_master, fmList, fsList):
         if skip_master != 2:
