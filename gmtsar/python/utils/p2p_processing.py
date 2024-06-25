@@ -44,11 +44,15 @@ def P2P1Preprocess(SAT: str, master, aligned, skip_master, cmdAppendix):
     check = 'ALOS' if SAT.startswith('ALOS') else SAT
     check = 'CSK' if SAT.startswith('CSK') else check
     files = needed_files.get(check, False)
-    if files:  # if files are critical, check for their existence based on the satellite
+    envi_or = SAT == 'ENVI_SLC'
+    if files and not envi_or:  # if files are critical, check for their existence based on the satellite
         for file in files:
             assert_existence(master + file)
             assert_existence(aligned + file)
-
+    elif envi_or:  # if the satellite is ENVI_SLC, any one set of the file extensions is sufficient
+        exist = [os.path.exists(f'raw/{master}{file}') and os.path.exists(f'raw/{aligned}{file}') for file in files]
+        if not any(exist):
+            raise FileNotFoundError(f"Files raw/{master} and raw/{aligned} not found.")
     if SAT == 'S1_TOPS':  # Rename master and aligned files for S1_TOPS, if necessary
         file_master, file_aligned = renameMasterAlignedForS1tops(master, aligned)
     else:

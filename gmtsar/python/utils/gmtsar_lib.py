@@ -121,7 +121,7 @@ def file_shuttle(fn0, fn1, opt):
         os.system("ln -sf " + fn0 + " " + fn1)
 
 
-def delete(fn):  # FIXME: Identify what file types this is being called on and use more specific rm functions
+def delete(fn):  # FIXME: Identify what file types this is being called on and use more specific os rm functions
     """
     delete file named fn. Currently supports only directory trees,
     find usages and fix to be filetype specific
@@ -356,7 +356,7 @@ def merge_unwrap_geocode_tops_csh(cmd_str):
     merge_unwrap_geocode_tops_csh is a wrapper for the csh script 
     of the same name. This script has yet to be implimented in python
     """
-    os.system(f"merge_unwrap_geocode_top.csh {cmd_str}")
+    os.system(f"merge_unwrap_geocode_tops.csh {cmd_str}")
 
 def ALOS_pre_process(cmd_str):
     """

@@ -104,6 +104,7 @@ class SATConfig:
         if filename.split('.')[-1] != 'yaml':
             self.pyconf = True
             self.config = self._read_pyconfig(filename)
+            return self.config
         with open(filename, 'r') as f:
             config = yaml.load(f, Loader=yaml.SafeLoader)
             self.config = self.parse_yaml(config)
@@ -125,13 +126,20 @@ class SATConfig:
         print('WARNING: using config.py is depreciated for security reasons. Please use config.yaml instead.')
         with open(filename, 'r') as f:
             exec(f.read())
+        local_vars = locals()
+        det_stitch = False
         for param, path in SATConfig.LOCATIONS.items():
-            if param not in locals:
+            if param == 'det_stitch':
+                det_stitch = True
+            if param not in local_vars:
                 if SATConfig.SAT_PARAMS[param]:
-                    locals().update({param: self.default_config[path][self.sat][param]})
+                    local_vars.update({param: self.default_config[path][self.sat][param]})
                 else:
-                    locals().update({param: self.default_config[path][param]})
-        return locals()
+                    local_vars.update({param: self.default_config[path][param]})
+        if self.sat == 'S1_TOPS' or self.sat == 'ALOS2_SCAN':
+            if not det_stitch:
+                local_vars['det_stitch'] = self.default_config['misc'][self.sat]['det_stitch']
+        return local_vars
 
     def parse_yaml(self, config: dict) -> dict:
         """
@@ -150,17 +158,16 @@ class SATConfig:
         for param, path in SATConfig.LOCATIONS.items():
             if param == 'det_stitch':
                 det_stich = True
-            if param in config:
-                if SATConfig.SAT_PARAMS[param]:
-                    parsed_config[param] = config[path][self.sat][param]
-                else:
-                    parsed_config[param] = config[path][param]
+            if SATConfig.SAT_PARAMS[param]:
+                parsed_config[param] = config.get(
+                    path, {}).get(
+                        self.sat, {}).get(
+                            param, self.default_config[path][self.sat].get(param, KeyError(
+                                f'Could not find [{path}][{self.sat}][{param}] in config file {config}, or in default config file.'
+                                ))
+                            )
             else:
-                if SATConfig.SAT_PARAMS[param]:
-                    print(f'finding default[{path}][{self.sat}][{param}]')
-                    parsed_config[param] = self.default_config[path][self.sat][param]
-                else:
-                    parsed_config[param] = self.default_config[path][param]
+                parsed_config[param] = config.get(path, {}).get(param, self.default_config[path][param])
         if self.sat == 'S1_TOPS' or self.sat == 'ALOS2_SCAN':
             if not det_stich:
                 parsed_config['det_stitch'] = self.default_config['misc'][self.sat]['det_stitch']

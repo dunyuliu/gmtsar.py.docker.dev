@@ -195,6 +195,12 @@ make_topo_ra:
 
   RS2:
     shift_topo: 0
+
+  ENVI_SLC:
+    shift_topo: 0
+  
+  ENVI:
+    shift_topo: 0
 # END Satellite specific parameters
 
 make_filter_intfs:
@@ -396,7 +402,8 @@ DEFAULT_CONFIG = {
         'CSK_SLC': {'shift_topo': 0},
         'TSX': {'shift_topo': 0},
         'ENVI_SLC': {'shift_topo': 0},
-        'RS2': {'shift_topo': 0}
+        'RS2': {'shift_topo': 0},
+        'ENVI': {'shift_topo': 0}
         },
     'make_filter_intfs': {
         'switch_master': 0, 'switch_land': -999,
