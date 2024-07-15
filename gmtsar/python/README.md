@@ -12,6 +12,17 @@ p2p_processing
 ```
 to see if help information is shown.
 
+You will also need to install the necessary Python packages. Currently, the following packages are required:
+pyYAML - Can be installed with 
+```
+pip install pyYAML
+```
+ or 
+ ```
+ conda install pyYAML
+ ```
+ (if you are using Anaconda)
+
 # Testing for developers
 Assuming $SCRATCH is where you want to carry out the testing of GMTSAR Python framework for all supported SATs, <br/>
 please put all testing datasets under $SCRATCH/py.test/ <br/>
