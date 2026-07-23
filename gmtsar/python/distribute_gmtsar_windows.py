@@ -485,7 +485,11 @@ if not exist "%HERE%pyenv\.gmtsar_unpacked" (
     echo done > "%HERE%pyenv\.gmtsar_unpacked"
 )
 set "GMTSAR=%HERE%."
-set "PATH=%HERE%bin;%HERE%git-bash\usr\bin;%HERE%pyenv;%HERE%pyenv\Scripts;%PATH%"
+rem pyenv\Library\bin: the gmt.exe CLI driver (and ghostscript etc.) live
+rem there -- the pipeline shells out to `gmt ...` constantly; dist\bin only
+rem carries the DLLs the gmtsar .exes link. Found by the first full-pipeline
+rem bundle smoke ("command not found (rc=127): gmt set ...").
+set "PATH=%HERE%bin;%HERE%git-bash\usr\bin;%HERE%pyenv;%HERE%pyenv\Scripts;%HERE%pyenv\Library\bin;%PATH%"
 set "GMTSAR_WIN_BASH=%HERE%git-bash\usr\bin\bash.exe"
 set "GMT_SHAREDIR=%HERE%pyenv\Library\share\gmt"
 if "%~1"=="" (
