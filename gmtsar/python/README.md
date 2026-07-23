@@ -71,14 +71,22 @@ python3 gmtsar/python/install.py --system conda
 # chain is ALSO conda-provided -- no system packages required at all
 # beyond a bare conda/miniconda install:
 python3 gmtsar/python/install.py --system conda-linux-full
+
+# Native Windows (no WSL, no MSYS2/Cygwin toolchain, no admin rights).
+# Requires Git for Windows (for a real POSIX shell -- gmtsar_lib.py
+# shells out via Git Bash) and an existing Miniconda/Anaconda install;
+# creates the conda env for you if it doesn't exist yet, including the
+# Windows-native build toolchain (m2w64-toolchain, cmake, ninja):
+python3 gmtsar/python/install.py --system windows_conda
 ```
 
 That's it for a first install — it installs system deps, Python packages, and builds, in one step. Then export the env vars it prints at the end:
 ```
 export GMTSAR=<this repo>
 export PATH=$GMTSAR/bin:$PATH
-conda activate gmtsar   # --system conda/conda-linux-full only; --system ubuntu already has gmt on PATH
+conda activate gmtsar   # --system conda/conda-linux-full/windows_conda only; --system ubuntu already has gmt on PATH
 ```
+(`--system windows_conda` prints the Windows equivalents -- `set`/`$env:` -- instead.)
 
 Sanity check:
 ```
@@ -129,6 +137,8 @@ python3 gmtsar/python/tests/sweep.py --fast --cases RS2_SLC_Hawaii   # single ca
 
 Force a re-run of an already-passing (cached) case: `--force` (hard: wipe csh+python+results), `--force py` (soft: wipe only python_test+results, keep the csh oracle), `--force stage` (wipe only stage-cache sentinels).
 
+**Windows (`--system windows_conda`)**: no `csh`/`tcsh` interpreter exists for native Windows, so the normal py-vs-csh sweep can't run there at all -- use `--topo-mode-ab` (see below) instead, which needs no csh.
+
 Inside one sweep: each case runs in its own background subprocess (`subprocess.run(..., start_new_session=True)` inside `case_runner.py`, invoked by a bounded `threading.Semaphore` pool in `sweep.py`); within a case, csh and python recipes run in parallel threads. Cap concurrent cases with `--parallel N` (default 12). `compare.py` is invoked in-process via `runpy` after all cases finish.
 
 `--topo-mode-ab` repurposes the same tree-pair machinery for a `topo_interp_mode=0` vs `=1` A/B comparison (both sides run the Python recipe, no csh) — folders are named `ref_test`/`new_test` in that mode instead of `csh_test`/`python_test`.
@@ -153,7 +163,7 @@ A frozen-csh reference can be optionally produced via `tests/freeze_reference.py
 
 ## Notes on the framework
 1. Per-case computing time is collected in `<workdir>/timeSpentLog.txt`; stdout from each case is piped to `log.txt` in the case folder. A summary (wall-clock + per-pipeline timings) prints at the end of `sweep.py`.
-2. `tests/compare.py` does the comparison. Required Python packages are installed by `install.py --system {ubuntu,conda}`. Per-file thresholds live in `PNG_SSIM_THRESHOLD` / `GRD_RMS_THRESHOLD` dicts at the top of the script (phase-named outputs use a complex-domain rms metric that's invariant to 2π wraps).
+2. `tests/compare.py` does the comparison. Required Python packages are installed by `install.py --system {ubuntu,conda,conda-linux-full,windows_conda}`. Per-file thresholds live in `PNG_SSIM_THRESHOLD` / `GRD_RMS_THRESHOLD` dicts at the top of the script (phase-named outputs use a complex-domain rms metric that's invariant to 2π wraps).
 3. `tests/report.py` aggregates `results/*.json` and emits `<workdir>/sweep_summary.md`.
 4. The case manifest, tier membership, and `enabled` flags live in `tests/cases.py` (`CASES` dict).
 
