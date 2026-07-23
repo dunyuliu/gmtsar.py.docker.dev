@@ -43,12 +43,26 @@ not "verified"):
   as a suite on Windows, and `tests/test_install.py` coverage for
   `conda-windows-full` (that script is POSIX-only throughout) are all
   open.
-- `distribute_gmtsar_windows.py` (self-contained user bundle:
-  conda-pack + DLL dependency walk + bundled Git Bash) is WIP — its
-  isolated-PATH `--verify` currently FAILS (27/38 exes; suspected
-  `api-ms-win-crt-*` stub redistribution and/or `VCRUNTIME140.dll`
-  misclassified as always-system). Do not ship a bundle until that
-  verify passes on a machine with nothing preinstalled.
+- `distribute_gmtsar_windows.py` (self-contained user bundle): PROVEN
+  2026-07-23 (v2.10.3). Root cause of the earlier 27/38 verify failure
+  was export FORWARDERS — conda-forge's win-64 libblas/liblapack shims
+  forward to mkl_rt.N.dll, invisible to any import-table walk; fixed by
+  walking forwarders (`_pe_forwarder_targets`, stdlib PE parse), pinning
+  the openblas BLAS variant (`WINDOWS_CONDA_BOOTSTRAP_PACKAGES`), and a
+  fail-loud MKL guard. Four more bundle-smoke-found fixes: bundle the
+  REAL `usr\bin\bash.exe` (Git's `bin\bash.exe` is a launcher stub),
+  launcher PATH gains `pyenv\Library\bin` (the `gmt.exe` CLI lives
+  there), `GMT_SHAREDIR` pinned (the gmt.dll copy has the build env's
+  share path baked in), and the `gmtsar/python/{utils,bin_py}` tree
+  bundled (the `$GMTSAR` import fallback needs it). Evidence: 3-layer
+  isolated-PATH verify passes (38/38 exes, bundled python imports,
+  bundled bash), AND a full RS2 p2p run from the bundle alone —
+  no conda, no Git for Windows in the environment — completed with
+  `phasefilt.grd` **bit-identical** (complex-rms 0.0) to the clean-room
+  sweep's mode0 reference. Remaining caveat: all runs were on the dev
+  host; a physically different bare machine hasn't executed the bundle
+  yet, and the final `.zip` is produced on demand (run without
+  `--skip-zip`), not stored in the repo.
 
 ## Explored 2026-07-23: full conda toolchain isolation for `install.py --system conda`
 

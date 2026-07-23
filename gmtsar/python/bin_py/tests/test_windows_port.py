@@ -225,3 +225,80 @@ def test_run_recipe_resolves_bash_via_win_bash():
     no-opping entire recipe runs. It must resolve via _win_bash()."""
     import case_runner
     assert "_win_bash" in inspect.getsource(case_runner._run_recipe)
+
+
+# ── distribute_gmtsar_windows.py: bundle-correctness guards (v2.10.3) ────────
+
+import distribute_gmtsar_windows as dist_mod  # noqa: E402
+
+
+def test_bootstrap_pins_openblas_blas_variant():
+    """Real bug (2026-07-23, isolated-PATH verify): conda-forge's win-64
+    default libblas/liblapack are MKL-variant forwarder shims; merely
+    co-installing openblas does NOT flip them, and MKL can't be bundled
+    (runtime dispatch). The variant pins are load-bearing."""
+    for pin in ("libblas=*=*openblas", "liblapack=*=*openblas",
+                "libcblas=*=*openblas"):
+        assert pin in install.WINDOWS_CONDA_BOOTSTRAP_PACKAGES
+
+
+def test_is_system_dll_policy():
+    """api-set names are virtual on Win10+ (never bundle); MSVC runtime
+    is NEVER system (presence in System32 only proves THIS machine has a
+    VC redist -- a clean target may not)."""
+    assert dist_mod._is_system_dll("api-ms-win-crt-math-l1-1-0.dll")
+    assert dist_mod._is_system_dll("ext-ms-win-anything.dll")
+    assert not dist_mod._is_system_dll("VCRUNTIME140.dll")
+    assert not dist_mod._is_system_dll("msvcp140.dll")
+
+
+@pytest.mark.skipif(os.name != "nt", reason="needs a real Windows system DLL")
+def test_pe_forwarder_targets_on_real_forwarders():
+    """kernel32.dll famously forwards a chunk of its exports to ntdll
+    (HeapAlloc -> NTDLL.RtlAllocateHeap, ...) -- a real, stable fixture
+    for the export-forwarder parser that found the MKL-shim bug."""
+    k32 = Path(os.environ["SystemRoot"]) / "System32" / "kernel32.dll"
+    targets = {t.lower() for t in dist_mod._pe_forwarder_targets(k32)}
+    assert "ntdll.dll" in targets
+
+
+def test_pe_forwarder_targets_tolerates_non_pe(tmp_path):
+    junk = tmp_path / "not_a_pe.dll"
+    junk.write_bytes(b"definitely not a PE file")
+    assert dist_mod._pe_forwarder_targets(junk) == set()
+
+
+def test_collect_dlls_walks_forwarders_and_guards_mkl():
+    src = inspect.getsource(dist_mod.do_collect_dlls)
+    assert "_pe_forwarder_targets" in src, \
+        "import-table-only walk misses forwarder deps (the MKL-shim bug)"
+    assert "mkl" in src, "MKL fail-loud guard removed"
+
+
+def test_launcher_template_contract():
+    """Each entry maps to a real bundle-smoke failure (2026-07-23):
+    gmt.exe lives in pyenv\Library\bin (rc=127 without it); the real
+    bash is usr\bin\bash.exe (Git\bin one is a launcher stub); the
+    gmt.dll copy in dist\bin has the BUILD env's share path baked in
+    (GMT_SHAREDIR must override)."""
+    t = dist_mod.LAUNCHER_TEMPLATE
+    assert r"pyenv\Library\bin" in t
+    assert r"git-bash\usr\bin\bash.exe" in t
+    assert "GMT_SHAREDIR" in t
+
+
+def test_bundle_includes_python_framework_tree():
+    """bin_py tools resolve their utils package via
+    $GMTSAR/gmtsar/python/utils -- the bundle must carry that tree or
+    every one of them ImportErrors (found by the first bundle smoke)."""
+    src = inspect.getsource(dist_mod.do_copy_gmtsar)
+    assert '"utils"' in src and '"bin_py"' in src
+
+
+def test_verify_harness_survives_stdin_readers():
+    """esarp.exe etc. block on stdin when invoked bare -- the verify must
+    close stdin and treat a long-running (started!) exe as pass, not
+    crash the whole run with TimeoutExpired."""
+    src = inspect.getsource(dist_mod.do_verify)
+    assert "DEVNULL" in src
+    assert "TimeoutExpired" in src
