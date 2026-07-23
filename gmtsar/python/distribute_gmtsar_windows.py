@@ -440,6 +440,10 @@ def do_bundle_bash(dist: Path, objdump: Path, force: bool) -> None:
                 dep_src = usr_bin / dep
                 if dep_src.is_file():
                     queue.append(dep_src)
+    # MSYS maps /tmp to <msys-root>/tmp (= git-bash/tmp here); without it
+    # every bash start warns "could not find /tmp, please create!" and
+    # anything using mktemp breaks. Ship it empty.
+    (git_bash_dir / "tmp").mkdir(exist_ok=True)
     if missing:
         _log(f"WARN: coreutils not found in {usr_bin}, not bundled: {missing}")
     n_dlls = sum(1 for c in copied if c.endswith(".dll"))
@@ -512,8 +516,15 @@ def do_verify(dist: Path) -> None:
     _log("==> verify: running each bin/*.exe with an ISOLATED PATH "
          "(no conda/git -- proves the bundle is really standalone)")
     system_root = os.environ.get("SystemRoot", r"C:\Windows")
+    # git-bash/usr/bin is on this PATH deliberately: it mirrors what the
+    # launcher (gmtsar_shell.bat) sets up. MSYS bash does NOT implicitly
+    # put its own /usr/bin on PATH for non-login `bash -c` invocations --
+    # without this entry, every coreutil (ln, mkdir, ...) is
+    # command-not-found even though it sits right next to bash.exe
+    # (found by this verify, 2026-07-23).
     isolated_path = os.pathsep.join([
-        str(dist / "bin"), os.path.join(system_root, "System32"), system_root,
+        str(dist / "bin"), str(dist / "git-bash" / "usr" / "bin"),
+        os.path.join(system_root, "System32"), system_root,
     ])
     env = {"PATH": isolated_path, "SystemRoot": system_root}
     failures = []
