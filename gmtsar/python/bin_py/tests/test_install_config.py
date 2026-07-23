@@ -244,6 +244,15 @@ def test_locate_conda_env_creates_when_missing_at_resolved_base(tmp_path, monkey
 
     monkeypatch.setattr(install, "CONDA_SEARCH_BASES", [str(tmp_path / "unrelated")])
     monkeypatch.setattr(install, "locate_conda_base", lambda: fake_conda_base)
+    # Force the classic `conda create` path this test actually exercises --
+    # without this, a REAL micromamba on the test host's own PATH (installed
+    # separately, unrelated to this test) gets preferred by locate_conda_env's
+    # real logic, bypassing fake_run's `cmd[:2] == [conda_bin, "create"]`
+    # check entirely since the command becomes ["micromamba", "create", ...].
+    # Found as a genuine regression 2026-07-23 when a real clean-room
+    # test_install.py --full run hit this on a host that happened to have
+    # micromamba installed.
+    monkeypatch.setattr(install.shutil, "which", lambda name: None)
 
     calls = []
     def fake_run(cmd, **kwargs):
@@ -255,6 +264,41 @@ def test_locate_conda_env_creates_when_missing_at_resolved_base(tmp_path, monkey
     prefix = install.locate_conda_env("gmtsar_regress_test")
     assert prefix == fake_conda_base / "envs" / "gmtsar_regress_test"
     assert calls, "conda create was never invoked"
+    assert "conda-forge" in calls[0]
+
+
+def test_locate_conda_env_prefers_micromamba_when_present(tmp_path, monkeypatch):
+    """Real bug found 2026-07-23 (a genuine clean-room test_install.py
+    --full run): classic conda's solver hung 28+ minutes unsolved on
+    the real CONDA_FORGE_BOOTSTRAP_PACKAGES set on a host with an old,
+    pre-libmamba-solver conda. locate_conda_env() now prefers
+    micromamba for the actual create call when present on PATH."""
+    fake_conda_base = tmp_path / "fakeconda"
+    (fake_conda_base / "bin").mkdir(parents=True)
+    conda_bin = fake_conda_base / "bin" / "conda"
+    conda_bin.write_text("#!/bin/sh\necho fake\n")
+    conda_bin.chmod(0o755)
+    fake_micromamba = tmp_path / "fake_micromamba"
+    fake_micromamba.write_text("#!/bin/sh\necho fake\n")
+    fake_micromamba.chmod(0o755)
+
+    monkeypatch.setattr(install, "CONDA_SEARCH_BASES", [str(tmp_path / "unrelated")])
+    monkeypatch.setattr(install, "locate_conda_base", lambda: fake_conda_base)
+    monkeypatch.setattr(install.shutil, "which",
+                        lambda name: str(fake_micromamba) if name == "micromamba" else None)
+
+    calls = []
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        if cmd[:1] == [str(fake_micromamba)]:
+            (fake_conda_base / "envs" / "gmtsar_mamba_test").mkdir(parents=True)
+    monkeypatch.setattr(install, "run", fake_run)
+
+    prefix = install.locate_conda_env("gmtsar_mamba_test")
+    assert prefix == fake_conda_base / "envs" / "gmtsar_mamba_test"
+    assert calls, "micromamba create was never invoked"
+    assert calls[0][0] == str(fake_micromamba)
+    assert "create" in calls[0]
     assert "conda-forge" in calls[0]
 
 
