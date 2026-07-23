@@ -468,6 +468,7 @@ if not exist "%HERE%pyenv\.gmtsar_unpacked" (
 set "GMTSAR=%HERE%."
 set "PATH=%HERE%bin;%HERE%git-bash\usr\bin;%HERE%pyenv;%HERE%pyenv\Scripts;%PATH%"
 set "GMTSAR_WIN_BASH=%HERE%git-bash\usr\bin\bash.exe"
+set "GMT_SHAREDIR=%HERE%pyenv\Library\share\gmt"
 if "%~1"=="" (
     echo GMTSAR environment ready (native Windows, self-contained bundle^).
     echo Try: p2p_processing RS2 ^<master^> ^<aligned^> config.py
