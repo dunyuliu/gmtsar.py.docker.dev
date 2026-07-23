@@ -62,16 +62,22 @@ One command, one installer: `gmtsar/python/install.py`. It builds gmtsar **in-pl
 # Ubuntu (sudo, apt-installs everything):
 python3 gmtsar/python/install.py --system ubuntu
 
-# Any Linux with an existing Miniconda/Anaconda install (no sudo; creates
-# the conda env for you if it doesn't exist yet):
+# Any platform with an existing Miniconda/Anaconda install (no sudo;
+# creates the conda env for you if it doesn't exist yet). Assumes the
+# system already has gfortran/g++/make/autoconf/csh/ghostscript:
 python3 gmtsar/python/install.py --system conda
+
+# Linux x86_64 only: like --system conda, but the compiler/build-tool
+# chain is ALSO conda-provided -- no system packages required at all
+# beyond a bare conda/miniconda install:
+python3 gmtsar/python/install.py --system conda-linux-full
 ```
 
 That's it for a first install — it installs system deps, Python packages, and builds, in one step. Then export the env vars it prints at the end:
 ```
 export GMTSAR=<this repo>
 export PATH=$GMTSAR/bin:$PATH
-conda activate gmtsar   # --system conda only; --system ubuntu already has gmt on PATH
+conda activate gmtsar   # --system conda/conda-linux-full only; --system ubuntu already has gmt on PATH
 ```
 
 Sanity check:
