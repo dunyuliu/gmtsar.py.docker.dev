@@ -76,8 +76,11 @@ python3 gmtsar/python/install.py --system conda-linux-full
 # Requires Git for Windows (for a real POSIX shell -- gmtsar_lib.py
 # shells out via Git Bash) and an existing Miniconda/Anaconda install;
 # creates the conda env for you if it doesn't exist yet, including the
-# Windows-native build toolchain (m2w64-toolchain, cmake, ninja):
-python3 gmtsar/python/install.py --system conda-windows-full
+# Windows-native build toolchain (m2w64-toolchain, cmake, ninja).
+# NOTE: `python`, not `python3` -- an Anaconda Prompt has no python3
+# alias (the install itself creates a python3.exe shim inside the env,
+# but that only exists AFTER this command has run):
+python gmtsar/python/install.py --system conda-windows-full
 ```
 
 That's it for a first install — it installs system deps, Python packages, and builds, in one step. Then export the env vars it prints at the end:

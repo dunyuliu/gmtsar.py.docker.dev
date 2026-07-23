@@ -223,7 +223,11 @@ def test_pytest_in_requirements_txt():
     all without a manual `pip install pytest` -- requirements.txt never
     listed it, even though running that suite is part of the documented
     dev workflow (README.md's "Testing for developers")."""
-    requirements = (_UTILS / "requirements.txt").read_text()
+    # encoding pinned: read_text() without one uses the LOCALE codepage
+    # (e.g. GBK on a zh-locale Windows host), which chokes on this
+    # UTF-8 file's non-ASCII chars -- real failure hit 2026-07-23 on the
+    # conda-windows-full clean-room host.
+    requirements = (_UTILS / "requirements.txt").read_text(encoding="utf-8")
     assert re.search(r"^pytest\b", requirements, re.MULTILINE), (
         "pytest missing from requirements.txt -- a fresh install can't "
         "run its own test suite")

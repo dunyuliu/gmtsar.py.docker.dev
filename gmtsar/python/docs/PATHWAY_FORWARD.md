@@ -1,5 +1,55 @@
 # Pathway forward — what's ported, what's not, and why
 
+## Landed 2026-07-23 (v2.10.x): native Windows — `install.py --system conda-windows-full`
+
+GMTSAR now builds and runs natively on Windows — no WSL, no
+MSYS2/Cygwin toolchain, no admin. CMake/Ninja build against a
+conda-provided MinGW-w64 toolchain (`m2w64-toolchain`); the Python
+framework and `.csh` scripts stage into `bin/` as flat copies (no
+reliable unprivileged symlink on Windows — so `--rebuild` is required
+to pick up source edits, unlike POSIX's live symlinks). Git for
+Windows is the one external prerequisite (`gmtsar_lib.py` routes all
+POSIX-syntax shell-outs through Git Bash; `GMTSAR_WIN_BASH` overrides
+the location).
+
+**Verified state (Rule 13 vocabulary): wired ON and clean-room
+proven for RS2_SLC_Hawaii only.** Two full clean-room runs 2026-07-23
+(fresh clone + fresh conda env `gmtsar_cr`, tarball cache reused per
+Rule 14): install rc=0 end-to-end including from-scratch
+`conda create` and `pip -r requirements.txt`, then `sweep.py --fast
+--cases RS2_SLC_Hawaii --topo-mode-ab` → 6/6 comparisons SUCCESS
+(SSIM ≥0.999, grd RMS ≤7e-4), matching a same-commit Linux
+py-vs-csh run's numbers. Regression guards:
+`bin_py/tests/test_windows_port.py` (one test per real bug found in
+the bring-up — cmd metacharacter parsing, missing pip, `_win_bash`
+race, WSL-stub bash, os.sep tree-name collapse, conv.c text-mode
+fopen).
+
+**Real upstream C bug found by this port**: `gmtsar/conv.c` opened
+binary SLC/`.grd=bf` files with `fopen(..., "r")` — text mode, a
+silent-corruption no-op on POSIX but catastrophic on Windows
+(correlation collapsed to ~0 over 85% of a real RS2 swath). Fix
+staged at `c_fixes/conv.c` per the v2.9.0 convention, applied at
+build time on every platform by `_apply_c_fixes()` (now called from
+`do_windows_build()` too).
+
+**Not done / honest gaps** (per Rule 13, "verified for one case" is
+not "verified"):
+- No py-vs-csh comparison possible on Windows at all — no `csh`/`tcsh`
+  interpreter exists for native Windows; `--topo-mode-ab` (py mode0 vs
+  py mode1) is the documented substitute. The C-oracle ground truth
+  can only ever come from a POSIX run.
+- Only RS2_SLC_Hawaii exercised; the other 20 cases, `bin_py/tests/`
+  as a suite on Windows, and `tests/test_install.py` coverage for
+  `conda-windows-full` (that script is POSIX-only throughout) are all
+  open.
+- `distribute_gmtsar_windows.py` (self-contained user bundle:
+  conda-pack + DLL dependency walk + bundled Git Bash) is WIP — its
+  isolated-PATH `--verify` currently FAILS (27/38 exes; suspected
+  `api-ms-win-crt-*` stub redistribution and/or `VCRUNTIME140.dll`
+  misclassified as always-system). Do not ship a bundle until that
+  verify passes on a machine with nothing preinstalled.
+
 ## Explored 2026-07-23: full conda toolchain isolation for `install.py --system conda`
 
 Today's `--system conda` deliberately keeps the SYSTEM's own compiler
