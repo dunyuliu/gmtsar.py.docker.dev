@@ -554,6 +554,26 @@ def do_write_licenses(dist: Path, conda_env_path: Path) -> None:
         "dependency, used by `gmt psconvert`). AGPL obligations apply to",
         "redistribution and to network service use built on it.",
         "",
+        "## Verbatim license texts (`licenses/`)",
+        "GPL-3.0: `LICENSE.TXT`. GPL-2.0, LGPL-2.1, LGPL-3.0, AGPL-3.0,",
+        "MPL-1.1, MPL-2.0: `licenses/<SPDX-id>.txt`. Components under",
+        '"GPL-2.0-only" (e.g. poppler) are covered by the GPL-2.0 text',
+        "specifically -- GPL-3 is not a substitute for -only terms.",
+        "pip-installed packages additionally carry their own texts at",
+        "`pyenv/Lib/site-packages/<pkg>-<ver>.dist-info/`.",
+        "",
+        "## Notes on specific manifest entries",
+        "- `m2w64-*` (MinGW toolchain), `cmake`, `ninja`: present in the",
+        "  BUILD environment's manifest below, but their files are",
+        "  EXCLUDED from this bundle (build-only; see",
+        "  PYENV_EXCLUDE_FILTERS) -- listed for completeness.",
+        "- `postgresql` (libpq): PostgreSQL License (permissive).",
+        "- `ucrt`: Microsoft Windows SDK redistributable (ucrtbase and",
+        "  API-set forwarders), redistribution with applications",
+        "  permitted per the Windows SDK license.",
+        "- `freetype`: dual `GPL-2.0-only OR FTL`; conveyed here under",
+        "  either at the recipient's option.",
+        "",
         "## conda-forge packages (bundled Python environment + `bin/` DLLs)",
         "Unmodified conda-forge builds; per-package source is available at",
         "https://anaconda.org/conda-forge/<name>.",
@@ -562,6 +582,39 @@ def do_write_licenses(dist: Path, conda_env_path: Path) -> None:
         "|---|---|---|",
     ]
     lines += [f"| {n} | {v} | {lic} |" for n, v, lic, _c in rows]
+
+    # pip-installed dists (requirements.txt) live only in site-packages
+    # metadata, NOT conda-meta -- a manifest built from conda-meta alone
+    # silently omits all of them (29 on the reference env; real audit gap
+    # found 2026-07-23). Enumerate via the env's own python.
+    pip_rows = []
+    env_py = conda_env_path / "python.exe"
+    if env_py.is_file():
+        dump = subprocess.run(
+            [str(env_py), "-c", (
+                "import importlib.metadata as md, json\n"
+                "out=[]\n"
+                "for d in md.distributions():\n"
+                "    n=d.metadata['Name']; lic=(d.metadata.get('License-Expression')"
+                " or d.metadata.get('License') or '')\n"
+                "    if not lic or len(lic)>60:\n"
+                "        for c in (d.metadata.get_all('Classifier') or []):\n"
+                "            if c.startswith('License ::'):"
+                " lic=c.split('::')[-1].strip(); break\n"
+                "    out.append((n, d.version, lic or 'see dist-info'))\n"
+                "print(json.dumps(out))")],
+            capture_output=True, text=True)
+        if dump.returncode == 0:
+            import json as _json2
+            conda_names = {n.lower() for n, _v, _l, _c in rows}
+            pip_rows = [r for r in _json2.loads(dump.stdout)
+                        if r[0].lower() not in conda_names]
+    if pip_rows:
+        lines += ["", "## pip-installed packages (bundled Python environment)",
+                  "License texts ship inside the bundle at",
+                  "`pyenv/Lib/site-packages/<pkg>-<ver>.dist-info/`.",
+                  "", "| package | version | license |", "|---|---|---|"]
+        lines += [f"| {n} | {v} | {lic} |" for n, v, lic in sorted(pip_rows)]
     notices.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     repo_license = REPO_ROOT / "LICENSE.TXT"
@@ -571,15 +624,29 @@ def do_write_licenses(dist: Path, conda_env_path: Path) -> None:
     if git_license.is_file():
         (dist / "git-bash").mkdir(exist_ok=True)
         shutil.copy2(git_license, dist / "git-bash" / "LICENSE.txt")
-    # Per-package license texts, where conda-forge installed them:
+    # Verbatim copyleft license texts, committed at license_texts/ (fetched
+    # once from gnu.org/mozilla.org/SPDX -- no build-time network). These
+    # are REQUIRED, not decorative: poppler is GPL-2.0-only (GPL-3 text
+    # can't substitute), gmt/dcw/gshhg are LGPL-3, geos/cairo/glib are
+    # LGPL-2.1, ghostscript is AGPL-3, spatialite/freexl are MPL-1.1.
+    texts_src = SCRIPT_DIR / "license_texts"
+    dst = dist / "licenses"
+    dst.mkdir(exist_ok=True)
+    n_texts = 0
+    if texts_src.is_dir():
+        for f in sorted(texts_src.glob("*.txt")):
+            shutil.copy2(f, dst / f.name)
+            n_texts += 1
+    if n_texts == 0:
+        sys.exit(f"ERROR: no license texts found at {texts_src} -- the bundle "
+                  "must not be distributed without them (poppler/GPL-2-only, "
+                  "ghostscript/AGPL-3, gmt/LGPL-3, ...).")
+    # Plus any per-package texts conda-forge installed into the env:
     lic_src = conda_env_path / "Library" / "share" / "licenses"
     if lic_src.is_dir():
-        dst = dist / "licenses"
-        if dst.exists():
-            shutil.rmtree(dst)
-        shutil.copytree(lic_src, dst)
-    _log(f"==> wrote {notices.name} ({len(rows)} packages), LICENSE.TXT, "
-         "git-bash/LICENSE.txt")
+        shutil.copytree(lic_src, dst / "conda-forge", dirs_exist_ok=True)
+    _log(f"==> wrote {notices.name} ({len(rows)} conda + {len(pip_rows)} pip "
+         f"packages), LICENSE.TXT, git-bash/LICENSE.txt, {n_texts} license texts")
 
 
 # ---------------------------------------------------------------- step 6 ----

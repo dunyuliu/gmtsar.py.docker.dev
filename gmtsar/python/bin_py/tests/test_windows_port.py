@@ -310,6 +310,16 @@ def test_bundle_writes_license_attribution():
     release blocker, not a nicety (flagged in PATHWAY_FORWARD v2.10.2/3,
     closed in v2.11.0)."""
     src = inspect.getsource(dist_mod.do_write_licenses)
-    for needle in ("THIRD_PARTY_NOTICES", "conda-meta", "AGPL", "LICENSE.TXT"):
+    for needle in ("THIRD_PARTY_NOTICES", "conda-meta", "AGPL", "LICENSE.TXT",
+                   "importlib.metadata",  # pip dists are NOT in conda-meta
+                   "license_texts"):      # verbatim copyleft texts, fail-loud
         assert needle in src
     assert "do_write_licenses" in inspect.getsource(dist_mod.main)
+    # The committed texts every copyleft component in the bundle requires
+    # (2026-07-23 audit): poppler GPL-2.0-only, gmt LGPL-3, geos LGPL-2.1,
+    # ghostscript AGPL-3, spatialite MPL-1.1, certifi MPL-2.0.
+    texts = _PY_ROOT / "license_texts"
+    for lic in ("GPL-2.0", "LGPL-2.1", "LGPL-3.0", "AGPL-3.0",
+                "MPL-1.1", "MPL-2.0"):
+        f = texts / f"{lic}.txt"
+        assert f.is_file() and f.stat().st_size > 5000, f"missing/stub {f}"
