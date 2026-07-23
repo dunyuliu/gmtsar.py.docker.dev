@@ -1,5 +1,66 @@
 # Pathway forward — what's ported, what's not, and why
 
+## Explored 2026-07-23: full conda toolchain isolation for `install.py --system conda`
+
+Today's `--system conda` deliberately keeps the SYSTEM's own compiler
+chain (gfortran, g++, make, autoconf, csh, ghostscript) rather than
+provisioning it via conda — see `do_conda_setup`'s docstring in
+`install.py`. User asked whether full isolation (conda providing the
+compiler too, nothing system-level required) is actually possible.
+
+**Real answer: yes, confirmed by an actual clean-room build.** Fresh
+`git clone`, a genuinely new conda env built with `micromamba` (classic
+`conda`'s solver hung 28+ min unsolved on the same package set — a real,
+separate finding: this host's conda is old, 4.14.0, pre-libmamba-solver;
+switch to `micromamba`/`conda-libmamba-solver` for any future from-conda
+bootstrap) from `gfortran_linux-64`, `gxx_linux-64`, `make`, `autoconf`,
+`ghostscript`, `tcsh`, plus the existing `CONDA_FORGE_BOOTSTRAP_PACKAGES`
+(`gmt=6.4`, `gshhg-gmt`, `dcw-gmt`, `flex`, `hdf5=1.12.*`, `libtiff`,
+`liblapack`). Real binaries (`esarp`, `xcorr`, `phasefilt`, ...) built,
+linked, and ran correctly — `ldd` showed zero missing shared libraries.
+
+Two real things needed beyond just installing packages:
+
+1. **conda-forge ships no `csh` package**, only `tcsh` — Debian/Ubuntu's
+   `csh` is itself just a `tcsh` wrapper. A `csh -> tcsh` symlink inside
+   the env's `bin/` is the fix; confirmed sufficient for what GMTSAR's
+   Python framework actually needs (per project direction, a real `csh`
+   package isn't required, only that csh invocations work).
+2. **A genuine GMTSAR source bug, found here for the first time**:
+   `gmtsar/fitoffset.c` calls `strlcpy()` with no include/declaration
+   anywhere. Implicit-declaration is only a *warning* on GCC < 14 (the
+   system's Ubuntu GCC 11.4.0, which today's `--system conda` uses) but
+   a **hard error** on GCC 14+ (conda-forge's `gxx_linux-64` is 15.2.0 —
+   GCC 14 promoted implicit function declarations to an error by default
+   as part of C23 alignment). This is NOT conda-specific — it will also
+   break `--system ubuntu` on any host with GCC 14+ (Ubuntu 24.10+,
+   Fedora 40+, Arch already ship it). Fix (`strlcpy` -> `snprintf`,
+   identical behavior for the fixed short literals involved) is staged
+   at `gmtsar/python/c_fixes/fitoffset.c` — NOT applied to the real
+   `gmtsar/gmtsar/fitoffset.c` yet (outside `gmtsar/python/`, this
+   repo's "everything else stays untouched for clean upstream merges"
+   rule) — apply manually or via a proper upstream PR when ready.
+
+`install.py`'s existing `patch_config_mk()` (TIFF/HDF5/GMT path fixup +
+`-Wl,-z,muldefs` for GCC 10+'s `-fno-common` default) already handles
+the rest correctly once the env is genuinely activated — no new code
+needed there, it was just easy to miss applying by hand during manual
+clean-room testing (cost real debugging time here).
+
+**Not wired into `install.py` as a real mode** (e.g. `--system
+conda-full`) — this session only confirmed feasibility. If picked up
+later: needs real env activation (unlike today's deliberate
+non-activation — see `do_conda_setup`'s docstring for why that was
+avoided) and the target-triplet compiler names
+(`x86_64-conda-linux-gnu-{cc,c++,gfortran}`), not plain
+`gcc`/`g++`/`gfortran`.
+
+Also landed independently of this exploration: `install.py` now fails
+fast with a clear message if `gfortran`/`g++`/`make`/`autoconf`/`csh`/
+`ghostscript` are missing under today's `--system conda`, instead of
+surfacing as a cryptic `autoconf`/`make` error deep in the build
+(`_check_system_build_tools()`, commit `8c169eb`).
+
 ## Fixed 2026-07-13: `write_gmt_grd` broke GMT's symlink-follow semantics
 
 Found by a real full 21-case regression sweep (`ALOS_haiti` FAIL:
