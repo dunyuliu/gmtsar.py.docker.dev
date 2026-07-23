@@ -319,13 +319,53 @@ CONDA_FORGE_FULL_ISOLATION_PACKAGES = [
 ]
 
 
-def locate_conda_env(envname: str, packages: list[str] | None = None) -> Path:
+def _resolve_current_conda_env() -> tuple[str, Path]:
+    """Resolve --conda-env current to (name, exact prefix path) of
+    whatever conda env is already active in this shell, via
+    $CONDA_DEFAULT_ENV (set by `conda activate`/`micromamba activate`,
+    not just $CONDA_PREFIX -- the latter is set even for 'base' with no
+    real activation) and $CONDA_PREFIX (the authoritative real path --
+    see locate_conda_env's known_prefix param for why this is used
+    directly instead of re-deriving the path by searching for the name).
+
+    Real feature request (2026-07-23, a downstream consumer -- InSARHub
+    -- testing this project): install.py always created/used a separate
+    'gmtsar'-named env, even when the caller was already inside a conda
+    env they wanted GMTSAR installed into directly (e.g. to share one
+    env across two projects' dependencies, avoiding version conflicts
+    between two separate envs each pinning their own numpy/gdal)."""
+    name = os.environ.get("CONDA_DEFAULT_ENV")
+    prefix = os.environ.get("CONDA_PREFIX")
+    if not name or name == "base" or not prefix:
+        sys.exit(
+            "ERROR: --conda-env current requires an activated (non-base) "
+            f"conda env in this shell -- $CONDA_DEFAULT_ENV is {name!r}, "
+            f"$CONDA_PREFIX is {prefix!r}. Run `conda activate <env>` "
+            "first, or pass a real env name instead of 'current'."
+        )
+    print(f"==> --conda-env current resolved to '{name}' at {prefix} "
+          f"(from $CONDA_DEFAULT_ENV/$CONDA_PREFIX)")
+    return name, Path(prefix)
+
+
+def locate_conda_env(envname: str, packages: list[str] | None = None,
+                      known_prefix: Path | None = None) -> Path:
     """Find an existing conda env named `envname`; if none exists, create
     it via `conda create -c conda-forge ...` so --system conda works on a
     brand-new host that already has *some* conda install but not yet the
     'gmtsar' env (network required for the create step). `packages`
     defaults to CONDA_FORGE_BOOTSTRAP_PACKAGES; --system conda-linux-full passes
     the extended list (+ CONDA_FORGE_FULL_ISOLATION_PACKAGES).
+
+    known_prefix: --conda-env current's exact path (from $CONDA_PREFIX),
+    used AS-IS instead of re-searching CONDA_SEARCH_BASES by name. The
+    search-by-name path below only checks a fixed set of common conda
+    install locations (see the incident this docstring already documents
+    for locate_conda_base) -- a currently-active env could legitimately
+    live under a completely different, non-standard root (a custom conda
+    install, a project-specific micromamba root, etc.), so re-deriving
+    its path by name when the real path is already known via activation
+    is both unnecessary and a real way to silently pick the wrong env.
 
     Real bug fixed 2026-07-13 (found by a genuine clean-room test, not
     a fixture): _find_existing_conda_env() only ever checks the fixed
@@ -348,6 +388,10 @@ def locate_conda_env(envname: str, packages: list[str] | None = None) -> Path:
     with zero output solving this exact package set -- a known classic-
     solver failure mode, not specific to any one package. micromamba
     solved and installed the same set in well under a minute."""
+    if known_prefix is not None:
+        if not known_prefix.is_dir():
+            sys.exit(f"ERROR: known_prefix {known_prefix} does not exist.")
+        return known_prefix
     existing = _find_existing_conda_env(envname)
     if existing is not None:
         return existing
@@ -501,7 +545,8 @@ def _check_conda_full_isolation_tools(prefix: Path) -> dict[str, str]:
     return {"CC": cc, "CXX": cxx, "F77": f77}
 
 
-def do_conda_setup(conda_env: str, full_isolation: bool = False) -> tuple[Path, dict[str, str]]:
+def do_conda_setup(conda_env: str, full_isolation: bool = False,
+                    known_prefix: Path | None = None) -> tuple[Path, dict[str, str]]:
     """Locate (or create, if missing -- see locate_conda_env) the conda
     env, then return its libs/includes as an explicit env-var dict for
     do_build to pass ONLY to the subprocess calls that need them --
@@ -529,7 +574,7 @@ def do_conda_setup(conda_env: str, full_isolation: bool = False) -> tuple[Path, 
     still never mutates this process's own os.environ."""
     packages = (CONDA_FORGE_BOOTSTRAP_PACKAGES + CONDA_FORGE_FULL_ISOLATION_PACKAGES
                 if full_isolation else CONDA_FORGE_BOOTSTRAP_PACKAGES)
-    prefix = locate_conda_env(conda_env, packages=packages)
+    prefix = locate_conda_env(conda_env, packages=packages, known_prefix=known_prefix)
     print(f"==> Using conda env at {prefix} (no sudo)")
     compiler_env = _check_conda_full_isolation_tools(prefix) if full_isolation else {}
     extra_env = {
@@ -900,8 +945,13 @@ def main() -> None:
                              "has it (see --system conda-linux-full in this "
                              "script's own docstring)")
     parser.add_argument("--conda-env", default="gmtsar",
-                        help="conda env name for --system conda "
-                             "(default: 'gmtsar')")
+                        help="conda env name for --system conda/conda-linux-full "
+                             "(default: 'gmtsar'). Pass 'current' to install into "
+                             "whatever conda env is already active in this shell "
+                             "(detected via $CONDA_DEFAULT_ENV) instead of "
+                             "creating/using a separate 'gmtsar'-named env -- "
+                             "errors clearly if no env is currently active "
+                             "(e.g. base, or no conda activation at all)")
     parser.add_argument("--rebuild", action="store_true",
                         help="skip the dependency steps, just rebuild + "
                              "re-stage (requires --system, for its build "
@@ -920,6 +970,10 @@ def main() -> None:
                   "(needed to resolve build flags, e.g. the conda env's "
                   "include/lib paths)")
 
+    current_conda_prefix: Path | None = None
+    if args.conda_env == "current":
+        args.conda_env, current_conda_prefix = _resolve_current_conda_env()
+
     _setup_log(args)
 
     use_conda = args.system in ("conda", "conda-linux-full")
@@ -931,13 +985,14 @@ def main() -> None:
             do_ubuntu_deps()
     elif args.system == "conda":
         _check_system_build_tools()
-        conda_prefix, extra_env = do_conda_setup(args.conda_env)
+        conda_prefix, extra_env = do_conda_setup(args.conda_env, known_prefix=current_conda_prefix)
     elif args.system == "conda-linux-full":
         # No _check_system_build_tools() -- conda-linux-full provisions the
         # compiler/build-tool chain itself; do_conda_setup's own
         # _check_conda_full_isolation_tools() verifies THAT instead.
         _check_conda_linux_full_platform()
-        conda_prefix, extra_env = do_conda_setup(args.conda_env, full_isolation=True)
+        conda_prefix, extra_env = do_conda_setup(args.conda_env, full_isolation=True,
+                                                 known_prefix=current_conda_prefix)
 
     if args.system is not None:
         if not args.rebuild:
