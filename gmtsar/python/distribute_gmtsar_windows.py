@@ -365,6 +365,25 @@ def do_collect_dlls(gmtsar_bin: Path, conda_env_path: Path, objdump: Path, dist_
 # ---------------------------------------------------------------- step 3 ----
 
 def do_copy_gmtsar(dist: Path, force: bool) -> None:
+    """bin/, lib/, share/ -- plus the Python framework source tree at
+    gmtsar/python/{utils,bin_py}: the staged bin_py tools (phasediff_py,
+    SAT_llt2rat_py, ...) locate their `utils` package via the
+    $GMTSAR/gmtsar/python/utils fallback (Windows staging copies scripts
+    flatly into bin/, so sibling-relative lookup fails there), and with
+    GMTSAR pointing at the bundle root that tree must exist INSIDE the
+    bundle -- found by the first full-pipeline bundle smoke, 2026-07-23."""
+    py_src = REPO_ROOT / "gmtsar" / "python"
+    for sub in ("utils", "bin_py"):
+        dst = dist / "gmtsar" / "python" / sub
+        if dst.exists() and not force:
+            _log(f"==> {dst} already exists, skipping (--force to redo)")
+        else:
+            if dst.exists():
+                shutil.rmtree(dst)
+            shutil.copytree(py_src / sub, dst,
+                            ignore=shutil.ignore_patterns("__pycache__", "tests",
+                                                           "archive", "*.pyc"))
+            _log(f"==> copied {py_src / sub} -> {dst}")
     for name in ("bin", "lib", "share"):
         src = REPO_ROOT / name
         dst = dist / name
