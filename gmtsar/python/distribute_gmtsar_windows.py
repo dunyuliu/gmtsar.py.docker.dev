@@ -379,11 +379,23 @@ def do_copy_gmtsar(dist: Path, force: bool) -> None:
 
 # ---------------------------------------------------------------- step 4 ----
 
-def do_bundle_bash(dist: Path, force: bool) -> None:
-    """Copy bash.exe + msys-2.0.dll + the specific coreutils gmtsar_lib.py
-    needs into dist/git-bash/. Located via gmtsar_lib._win_bash()'s own
-    candidate list, so this always bundles whatever bash the dev build
-    actually validated against."""
+def do_bundle_bash(dist: Path, objdump: Path, force: bool) -> None:
+    """Bundle a minimal REAL Git Bash into dist/git-bash/usr/bin/.
+
+    Crucial subtlety (found by the isolated-PATH verify, 2026-07-23):
+    Git for Windows' `Git\\bin\\bash.exe` -- the path gmtsar_lib's
+    _win_bash() resolves and everyone knows -- is NOT bash. It's a tiny
+    launcher stub that re-executes `..\\usr\\bin\\bash.exe`; copied
+    alone it dies with "('...\\usr\\bin\\bash.exe' not found) Need a
+    valid command-line". The real interpreter, its msys-*.dll runtime,
+    and the coreutils all live under `usr\\bin\\`, so the bundle
+    replicates exactly that layout and everything (launcher, verify,
+    GMTSAR_WIN_BASH) points at usr/bin/bash.exe directly -- no stub.
+
+    Each bundled tool's msys-*.dll dependencies are resolved via its
+    actual import table (same objdump walk as the main DLL step) rather
+    than a hardcoded 'msys-2.0.dll' guess -- sed/grep etc. pull extra
+    msys runtime DLLs (iconv, intl, pcre) a guess would miss."""
     git_bash_dir = dist / "git-bash"
     if git_bash_dir.exists() and not force:
         _log(f"==> {git_bash_dir} already exists, skipping (--force to redo)")
@@ -393,37 +405,46 @@ def do_bundle_bash(dist: Path, force: bool) -> None:
 
     sys.path.insert(0, str(REPO_ROOT / "gmtsar" / "python" / "utils"))
     import gmtsar_lib
-    bash_exe = Path(gmtsar_lib._win_bash())
-    if not bash_exe.is_file():
+    stub_or_real = Path(gmtsar_lib._win_bash())
+    if not stub_or_real.is_file():
         sys.exit("ERROR: no working Git Bash found on this machine -- can't bundle it. "
                   "Install Git for Windows first.")
-    git_root = bash_exe.parent.parent  # .../Git/bin/bash.exe -> .../Git
+    git_root = stub_or_real.parent.parent  # .../Git/bin/bash.exe -> .../Git
+    usr_bin = git_root / "usr" / "bin"
+    real_bash = usr_bin / "bash.exe"
+    if not real_bash.is_file():
+        sys.exit(f"ERROR: {real_bash} not found -- unexpected Git for Windows layout.")
 
-    (git_bash_dir / "bin").mkdir(parents=True, exist_ok=True)
-    shutil.copy2(bash_exe, git_bash_dir / "bin" / "bash.exe")
-    msys_dll = next(
-        (c for c in (bash_exe.parent / "msys-2.0.dll",
-                      git_root / "usr" / "bin" / "msys-2.0.dll")
-         if c.is_file()),
-        None)
-    if msys_dll is None:
-        sys.exit(f"ERROR: msys-2.0.dll not found under {git_root} (checked bin/ and usr/bin/)")
-    shutil.copy2(msys_dll, git_bash_dir / "bin" / "msys-2.0.dll")
+    dst = git_bash_dir / "usr" / "bin"
+    dst.mkdir(parents=True, exist_ok=True)
 
+    to_copy = [real_bash]
     missing = []
     for tool in BASH_COREUTILS:
-        src = bash_exe.parent / tool
-        if not src.is_file():
-            src = git_root / "usr" / "bin" / tool
-        if not src.is_file():
+        src = usr_bin / tool
+        if src.is_file():
+            to_copy.append(src)
+        else:
             missing.append(tool)
+
+    copied: set[str] = set()
+    queue = list(to_copy)
+    while queue:
+        f = queue.pop()
+        if f.name.lower() in copied:
             continue
-        shutil.copy2(src, git_bash_dir / "bin" / tool)
+        shutil.copy2(f, dst / f.name)
+        copied.add(f.name.lower())
+        for dep in _dll_imports(objdump, f):
+            if dep.lower().startswith("msys-") and dep.lower() not in copied:
+                dep_src = usr_bin / dep
+                if dep_src.is_file():
+                    queue.append(dep_src)
     if missing:
-        _log(f"WARN: coreutils not found, not bundled (may be builtins, or missing "
-             f"a real dependency -- check if the pipeline actually needs them): {missing}")
-    _log(f"==> bundled Git Bash ({bash_exe}) + {len(BASH_COREUTILS) - len(missing)} "
-         f"coreutils into {git_bash_dir}")
+        _log(f"WARN: coreutils not found in {usr_bin}, not bundled: {missing}")
+    n_dlls = sum(1 for c in copied if c.endswith(".dll"))
+    _log(f"==> bundled real Git Bash ({real_bash}) + "
+         f"{len(copied) - n_dlls - 1} coreutils + {n_dlls} msys DLLs into {dst}")
 
 
 # ---------------------------------------------------------------- step 5 ----
@@ -441,8 +462,8 @@ if not exist "%HERE%pyenv\.gmtsar_unpacked" (
     echo done > "%HERE%pyenv\.gmtsar_unpacked"
 )
 set "GMTSAR=%HERE%."
-set "PATH=%HERE%bin;%HERE%git-bash\bin;%HERE%pyenv;%HERE%pyenv\Scripts;%PATH%"
-set "GMTSAR_WIN_BASH=%HERE%git-bash\bin\bash.exe"
+set "PATH=%HERE%bin;%HERE%git-bash\usr\bin;%HERE%pyenv;%HERE%pyenv\Scripts;%PATH%"
+set "GMTSAR_WIN_BASH=%HERE%git-bash\usr\bin\bash.exe"
 if "%~1"=="" (
     echo GMTSAR environment ready (native Windows, self-contained bundle^).
     echo Try: p2p_processing RS2 ^<master^> ^<aligned^> config.py
@@ -535,7 +556,7 @@ def do_verify(dist: Path) -> None:
     _log("==> bundled python imports numpy/scipy/numba/netCDF4/matplotlib OK "
          "with no conda/git on PATH")
 
-    bash = dist / "git-bash" / "bin" / "bash.exe"
+    bash = dist / "git-bash" / "usr" / "bin" / "bash.exe"
     bash_check = subprocess.run(
         [str(bash), "-c", "echo hello && ln --version >/dev/null && mkdir -p /tmp/x && rm -rf /tmp/x && echo OK"],
         capture_output=True, text=True, env={"PATH": isolated_path, "SystemRoot": system_root})
@@ -584,7 +605,7 @@ def main() -> None:
     # would have do_copy_gmtsar delete the DLLs do_collect_dlls just copied.
     do_copy_gmtsar(dist, args.force)
     do_collect_dlls(gmtsar_bin, conda_env_path, objdump, dist / "bin")
-    do_bundle_bash(dist, args.force)
+    do_bundle_bash(dist, objdump, args.force)
     do_write_launcher(dist)
 
     if args.verify:
