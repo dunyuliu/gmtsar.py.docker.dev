@@ -339,6 +339,27 @@ def do_ubuntu_deps() -> None:
     run(sudo + ["apt", "install", "-y"] + APT_SYSTEM_DEPS)
 
 
+# Real system build tools --system conda deliberately assumes are already
+# present (see do_conda_setup's docstring for why) rather than provisioning
+# them itself the way --system ubuntu does via apt. Checked up front so a
+# missing one fails fast with a clear message, instead of surfacing as a
+# cryptic autoconf/make error deep inside the build.
+REQUIRED_SYSTEM_BUILD_TOOLS = ("gfortran", "g++", "make", "autoconf", "csh", "gs")
+# "gs" is the actual binary name for ghostscript.
+
+def _check_system_build_tools() -> None:
+    missing = [t for t in REQUIRED_SYSTEM_BUILD_TOOLS if shutil.which(t) is None]
+    if missing:
+        sys.exit(
+            "ERROR: --system conda still requires these system build tools "
+            f"on PATH (not provisioned by conda): {', '.join(missing)}. "
+            "Install them via your OS package manager (e.g. on Ubuntu: "
+            "apt install gfortran g++ make autoconf csh ghostscript), then "
+            "re-run. See install.py's --system conda docstring for why "
+            "these aren't conda-provisioned."
+        )
+
+
 def do_conda_setup(conda_env: str) -> tuple[Path, dict[str, str]]:
     """Locate (or create, if missing -- see locate_conda_env) the conda
     env, then return its libs/includes as an explicit env-var dict for
@@ -699,6 +720,7 @@ def main() -> None:
         if not args.rebuild:
             do_ubuntu_deps()
     elif args.system == "conda":
+        _check_system_build_tools()
         conda_prefix, extra_env = do_conda_setup(args.conda_env)
 
     if args.system is not None:
