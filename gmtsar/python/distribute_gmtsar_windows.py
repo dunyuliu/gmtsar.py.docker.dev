@@ -199,17 +199,30 @@ def do_pack_python(conda_env_path: Path, dist: Path, force: bool) -> Path:
 
 # ---------------------------------------------------------------- step 2 ----
 
-# Windows system DLLs are resolved by checking real presence in System32/
-# SysWOW64 -- NOT a maintained name-pattern allowlist, which is exactly the
-# kind of list that silently rots (new api-ms-win-* sets ship with every
-# Windows feature update). A DLL is "system" iff Windows itself already
-# provides it.
-_SYSTEM_DIRS = [Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32",
-                Path(os.environ.get("SystemRoot", r"C:\Windows")) / "SysWOW64"]
+# Windows system DLLs are resolved by checking real presence in System32
+# (the 64-bit view -- NOT SysWOW64, whose 32-bit DLLs an x64 exe cannot
+# load; a name present ONLY there must be bundled, not skipped). Not a
+# maintained name-pattern allowlist, which is exactly the kind of list
+# that silently rots. Two deliberate exceptions:
+#  - api-ms-win-*/ext-ms-* "API set" names are VIRTUAL on Win10+: the
+#    loader resolves them via the OS ApiSetSchema, never the filesystem.
+#    Treated as system unconditionally, and never bundled (shipping the
+#    conda env's stub files alongside the exes is at best dead weight).
+#  - MSVC runtime DLLs (vcruntime*/msvcp*/concrt*) are NEVER treated as
+#    system even when present in System32: presence there just means THIS
+#    machine has some VC redist installed -- a clean target may not, and
+#    conda-built DLLs (gmt.dll etc.) hard-require them. Bundle app-locally
+#    from the conda env (which ships them, and their license permits it).
+_SYSTEM32 = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32"
 
 
 def _is_system_dll(name: str) -> bool:
-    return any((d / name).is_file() for d in _SYSTEM_DIRS)
+    low = name.lower()
+    if low.startswith(("api-ms-", "ext-ms-")):
+        return True
+    if low.startswith(("vcruntime", "msvcp", "concrt")):
+        return False
+    return (_SYSTEM32 / name).is_file()
 
 
 def _dll_imports(objdump: Path, path: Path) -> list[str]:
@@ -217,12 +230,84 @@ def _dll_imports(objdump: Path, path: Path) -> list[str]:
     return [ln.split("DLL Name:")[1].strip() for ln in out.splitlines() if "DLL Name:" in ln]
 
 
+def _pe_forwarder_targets(path: Path) -> set[str]:
+    """DLL names referenced by this PE's export FORWARDERS -- exports whose
+    address entry points at an ASCII "TargetModule.TargetFunction" string
+    instead of code. The loader resolves these at import time exactly like
+    static imports, but NO import-table walk can see them. Real bug found
+    2026-07-23 by the isolated-PATH verify: conda-forge's libblas.dll/
+    liblapack.dll are pure forwarder shims to mkl_rt.N.dll, so gmt.dll
+    (which imports the shims) died STATUS_DLL_NOT_FOUND with every
+    import-table dependency present and loadable.
+
+    Minimal PE export-directory parse (stdlib only, no pefile dep). Any
+    malformed/unparseable file returns empty -- the import walk still
+    covers it, and _verify is the final backstop."""
+    try:
+        data = path.read_bytes()
+        pe_off = int.from_bytes(data[0x3C:0x40], "little")
+        if data[pe_off:pe_off + 4] != b"PE\0\0":
+            return set()
+        n_sections = int.from_bytes(data[pe_off + 6:pe_off + 8], "little")
+        opt_size = int.from_bytes(data[pe_off + 20:pe_off + 22], "little")
+        opt_off = pe_off + 24
+        magic = int.from_bytes(data[opt_off:opt_off + 2], "little")
+        dd_off = opt_off + (112 if magic == 0x20B else 96)  # PE32+ vs PE32
+        exp_rva = int.from_bytes(data[dd_off:dd_off + 4], "little")
+        exp_size = int.from_bytes(data[dd_off + 4:dd_off + 8], "little")
+        if not exp_rva:
+            return set()
+        sections = []
+        sec_off = opt_off + opt_size
+        for i in range(n_sections):
+            s = sec_off + 40 * i
+            va = int.from_bytes(data[s + 12:s + 16], "little")
+            raw_size = int.from_bytes(data[s + 16:s + 20], "little")
+            raw_ptr = int.from_bytes(data[s + 20:s + 24], "little")
+            virt_size = int.from_bytes(data[s + 8:s + 12], "little")
+            sections.append((va, max(raw_size, virt_size), raw_ptr))
+
+        def off(rva: int) -> int | None:
+            for va, size, raw in sections:
+                if va <= rva < va + size:
+                    return raw + (rva - va)
+            return None
+
+        e = off(exp_rva)
+        if e is None:
+            return set()
+        n_funcs = int.from_bytes(data[e + 20:e + 24], "little")
+        aof_rva = int.from_bytes(data[e + 28:e + 32], "little")
+        aof = off(aof_rva)
+        if aof is None:
+            return set()
+        targets: set[str] = set()
+        for i in range(n_funcs):
+            func_rva = int.from_bytes(data[aof + 4 * i:aof + 4 * i + 4], "little")
+            # A forwarder iff the entry points INSIDE the export directory.
+            if not (exp_rva <= func_rva < exp_rva + exp_size):
+                continue
+            so = off(func_rva)
+            if so is None:
+                continue
+            end = data.index(b"\0", so)
+            fwd = data[so:end].decode("ascii", "replace")
+            module = fwd.rsplit(".", 1)[0]  # "mkl_rt.2.dll.dgemm_" -> "mkl_rt.2.dll"
+            if not module.lower().endswith(".dll"):
+                module += ".dll"           # "NTDLL.RtlX" -> "NTDLL.dll"
+            targets.add(module)
+        return targets
+    except Exception:
+        return set()
+
+
 def do_collect_dlls(gmtsar_bin: Path, conda_env_path: Path, objdump: Path, dist_bin: Path) -> None:
-    """BFS the PE import table of every bin/*.exe and *.dll, resolve each
-    non-system DLL against the conda env's library dirs, copy into
-    dist_bin/. Raises if anything can't be resolved -- a silently-missing
-    DLL is a bundle that works on the dev machine and crashes for every
-    real user (project_rules.md Rule 1: fail loud, not quiet)."""
+    """BFS every bin/*.exe and *.dll over BOTH dependency channels -- the
+    import table AND export forwarders (see _pe_forwarder_targets) --
+    resolving each non-system DLL against the conda env's library dirs and
+    copying into dist_bin/. Raises if anything can't be resolved -- a
+    silently-missing DLL is a bundle that works on the dev machine and
+    crashes for every real user (project_rules.md Rule 1)."""
     search_dirs = [
         conda_env_path / "Library" / "bin",
         conda_env_path / "Library" / "mingw-w64" / "bin",
@@ -230,13 +315,15 @@ def do_collect_dlls(gmtsar_bin: Path, conda_env_path: Path, objdump: Path, dist_
         gmtsar_bin,
     ]
     start = list(gmtsar_bin.glob("*.exe")) + list(gmtsar_bin.glob("*.dll"))
-    _log(f"==> walking DLL dependencies from {len(start)} files in {gmtsar_bin}")
+    _log(f"==> walking DLL dependencies (imports + export forwarders) "
+         f"from {len(start)} files in {gmtsar_bin}")
     resolved: dict[str, Path] = {}
     queue = list(start)
     unresolved: set[str] = set()
     while queue:
         f = queue.pop()
-        for dll in _dll_imports(objdump, f):
+        deps = set(_dll_imports(objdump, f)) | _pe_forwarder_targets(f)
+        for dll in deps:
             if dll.lower() in resolved or _is_system_dll(dll):
                 continue
             hit = next((d / dll for d in search_dirs if (d / dll).is_file()), None)
@@ -245,6 +332,19 @@ def do_collect_dlls(gmtsar_bin: Path, conda_env_path: Path, objdump: Path, dist_
                 continue
             resolved[dll.lower()] = hit
             queue.append(hit)
+
+    mkl = sorted(n for n in resolved if n.startswith("mkl_"))
+    if mkl:
+        sys.exit(
+            f"ERROR: the dependency walk pulled in MKL ({mkl}) -- this env's "
+            "libblas/liblapack shims are the MKL variant. MKL cannot be "
+            "bundled statically (mkl_rt dispatches to mkl_core/mkl_avx*/... "
+            "via runtime LoadLibrary that no static walk can see). Switch "
+            "the env to the openblas variant first:\n"
+            "    conda install -n <env> -c conda-forge libblas=*=*openblas "
+            "liblapack=*=*openblas libcblas=*=*openblas\n"
+            "(install.py's WINDOWS_CONDA_BOOTSTRAP_PACKAGES pins this for "
+            "fresh envs since v2.10.3.)")
 
     if unresolved:
         sys.exit(

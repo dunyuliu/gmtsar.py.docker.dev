@@ -641,6 +641,21 @@ def do_conda_setup(conda_env: str, full_isolation: bool = False) -> tuple[Path, 
 # txt's WIN32 block).
 WINDOWS_CONDA_BOOTSTRAP_PACKAGES = [
     "gmt=6.4", "gshhg-gmt", "dcw-gmt", "libtiff>=4.5,<5", "openblas",
+    # Variant pins, not just the openblas package: on win-64, conda-forge's
+    # DEFAULT libblas/liblapack shim DLLs are the MKL variant -- their
+    # EXPORTS are forwarders to mkl_rt.N.dll, so anything linking the shims
+    # (conda's own gmt.dll does) needs the MKL runtime at load time even
+    # when openblas is co-installed. Real bug found 2026-07-23 by
+    # distribute_gmtsar_windows.py's isolated-PATH verify: gmt.dll failed
+    # STATUS_DLL_NOT_FOUND with every *import-table* dependency present,
+    # because forwarders live in the export table where no import walk
+    # sees them. MKL also can't be bundled statically (mkl_rt dispatches
+    # to mkl_core/mkl_avx*/... via runtime LoadLibrary). Pinning the
+    # openblas variant makes the shims forward to openblas.dll -- which
+    # this build already links directly (see gmtsar/CMakeLists.txt's
+    # WIN32 openblas import-lib workaround) -- and drops MKL from the
+    # env entirely (smaller, self-containable).
+    "libblas=*=*openblas", "liblapack=*=*openblas", "libcblas=*=*openblas",
     "m2w64-toolchain", "cmake", "ninja",
     # Same class of bug CONDA_FORGE_BOOTSTRAP_PACKAGES fixed in v2.9.0
     # (see its own "pip" entry): python arrives transitively (gmt -> gdal
