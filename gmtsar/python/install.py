@@ -16,24 +16,39 @@ Miniconda/Anaconda):
     ubuntu      apt-install system deps (REQUIRES SUDO). Provisions
                 everything: gmt, gfortran, g++, make, autoconf, csh,
                 ghostscript, libtiff, libhdf5, liblapack, ...
-    conda       use a conda env (no sudo). Set CONDA_GMTSAR_ENV (or
-                --conda-env) to pick which env (default: 'gmtsar'). If
-                the env doesn't exist yet, it's created via `conda
-                create -c conda-forge gmt hdf5 libtiff liblapack ...`
-                (network required, also bootstraps flex -- see
-                do_conda_setup's docstring for why flex specifically is
-                conda-provisioned rather than assumed). Still assumes
-                the system already has basic build tools (gfortran, g++,
-                make, autoconf, csh, ghostscript) -- --system conda
-                deliberately keeps the SYSTEM compiler in use rather
-                than conda's (see do_conda_setup's docstring), so it is
-                not a fully from-scratch bootstrap on a bare OS image
-                the way --system ubuntu is.
-    conda-full  like conda, but the compiler/build-tool chain is ALSO
+    conda       use a conda env (no sudo). NOT restricted to Linux --
+                unlike conda-linux-full below, this defers entirely to
+                whatever compiler is already on the system's PATH
+                (Homebrew's gfortran/gcc on macOS works just as well as
+                a Linux distro's apt-installed ones), and every package
+                in CONDA_FORGE_BOOTSTRAP_PACKAGES has cross-platform
+                conda-forge builds -- it was just never documented
+                which platforms this actually covers until now. Set
+                CONDA_GMTSAR_ENV (or --conda-env) to pick which env
+                (default: 'gmtsar'). If the env doesn't exist yet, it's
+                created via `conda create -c conda-forge gmt hdf5
+                libtiff liblapack ...` (network required, also
+                bootstraps flex -- see do_conda_setup's docstring for
+                why flex specifically is conda-provisioned rather than
+                assumed). Still assumes the system already has basic
+                build tools (gfortran, g++, make, autoconf, csh,
+                ghostscript) -- --system conda deliberately keeps the
+                SYSTEM compiler in use rather than conda's (see
+                do_conda_setup's docstring), so it is not a fully
+                from-scratch bootstrap on a bare OS image the way
+                --system ubuntu or conda-linux-full are.
+    conda-linux-full
+                like conda, but the compiler/build-tool chain is ALSO
                 conda-provided (gfortran_linux-64, gxx_linux-64, make,
                 autoconf, ghostscript, tcsh) -- genuinely no system
                 packages required at all beyond a bare conda/miniconda
-                install. Confirmed working via a real clean-room build,
+                install. LINUX x86_64 ONLY -- conda-forge's compiler
+                packages are per-target (gfortran_linux-64 etc; macOS
+                would need entirely different package names, e.g.
+                clang_osx-64/gfortran_osx-64, not implemented here).
+                Fails fast with a clear error on any other platform
+                rather than silently trying wrong package names.
+                Confirmed working via a real clean-room build,
                 2026-07-23 (see docs/PATHWAY_FORWARD.md). No plain `csh`
                 package exists on conda-forge (only `tcsh`, which
                 Debian/Ubuntu's own `csh` package itself just wraps) --
@@ -60,6 +75,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import os
+import platform
 import shutil
 import stat
 import subprocess
@@ -275,7 +291,7 @@ def locate_conda_base() -> Path:
 CONDA_FORGE_BOOTSTRAP_PACKAGES = [
     "gmt=6.4", "gshhg-gmt", "dcw-gmt", "flex",
     "hdf5=1.12.*", "libtiff>=4.5,<5", "liblapack>=3.9",
-    # Real bug found 2026-07-23 (a genuine --system conda-full clean-room
+    # Real bug found 2026-07-23 (a genuine --system conda-linux-full clean-room
     # env creation, not a fixture): python itself is pulled in
     # transitively (via gdal's python bindings, a gmt dependency), but
     # pip is NOT -- do_python_deps's `pip install -r requirements.txt`
@@ -289,7 +305,7 @@ CONDA_FORGE_BOOTSTRAP_PACKAGES = [
     "pip",
 ]
 
-# --system conda-full only: the compiler/build-tool chain --system conda
+# --system conda-linux-full only: the compiler/build-tool chain --system conda
 # otherwise assumes the system already provides. conda-forge names its
 # compiler-activation packages per-target (gfortran_linux-64 etc, not
 # plain "gfortran") -- see do_conda_setup's docstring for why activation
@@ -308,7 +324,7 @@ def locate_conda_env(envname: str, packages: list[str] | None = None) -> Path:
     it via `conda create -c conda-forge ...` so --system conda works on a
     brand-new host that already has *some* conda install but not yet the
     'gmtsar' env (network required for the create step). `packages`
-    defaults to CONDA_FORGE_BOOTSTRAP_PACKAGES; --system conda-full passes
+    defaults to CONDA_FORGE_BOOTSTRAP_PACKAGES; --system conda-linux-full passes
     the extended list (+ CONDA_FORGE_FULL_ISOLATION_PACKAGES).
 
     Real bug fixed 2026-07-13 (found by a genuine clean-room test, not
@@ -326,7 +342,7 @@ def locate_conda_env(envname: str, packages: list[str] | None = None) -> Path:
 
     Prefers `micromamba` for the actual create call, if present on PATH,
     over classic `conda create`. Real bug found 2026-07-23 (a genuine
-    clean-room --system conda-full attempt, not a fixture): classic
+    clean-room --system conda-linux-full attempt, not a fixture): classic
     conda's solver (pre-libmamba-solver conda, e.g. 4.14.0) fell back
     from the fast repodata index to the full one and hung 28+ minutes
     with zero output solving this exact package set -- a known classic-
@@ -427,6 +443,27 @@ def _find_conda_compiler(prefix: Path, kind: str) -> str | None:
     return str(matches[0]) if matches else None
 
 
+def _check_conda_linux_full_platform() -> None:
+    """--system conda-linux-full only works on Linux x86_64:
+    CONDA_FORGE_FULL_ISOLATION_PACKAGES names conda-forge's per-target
+    compiler-activation packages (gfortran_linux-64, gxx_linux-64) --
+    macOS needs entirely different package names (e.g. clang_osx-64,
+    gfortran_osx-64), not implemented here. Checked up front so this
+    fails with a clear message instead of `conda create` silently
+    erroring on unknown package names for the wrong platform."""
+    system = platform.system()
+    machine = platform.machine()
+    if system != "Linux" or machine not in ("x86_64", "AMD64"):
+        sys.exit(
+            f"ERROR: --system conda-linux-full only supports Linux x86_64 "
+            f"(detected {system} {machine}). Its compiler packages "
+            f"(gfortran_linux-64, gxx_linux-64) are Linux-specific conda-forge "
+            f"names -- macOS/ARM would need different packages, not "
+            f"implemented here. Use --system conda instead (assumes the "
+            f"system's own compiler, which works on any platform)."
+        )
+
+
 def _check_conda_full_isolation_tools(prefix: Path) -> dict[str, str]:
     """Verify the env actually has the full-isolation compiler/build-tool
     set (whether just-created or a pre-existing env being reused), and
@@ -450,7 +487,7 @@ def _check_conda_full_isolation_tools(prefix: Path) -> dict[str, str]:
         sys.exit(
             f"ERROR: conda env at {prefix} is missing full-isolation "
             f"build tools: {', '.join(missing)}. Either recreate the env "
-            f"(delete it and re-run --system conda-full) or manually "
+            f"(delete it and re-run --system conda-linux-full) or manually "
             f"`conda install -n <env> -c conda-forge "
             f"{' '.join(CONDA_FORGE_FULL_ISOLATION_PACKAGES)}`."
         )
@@ -482,7 +519,7 @@ def do_conda_setup(conda_env: str, full_isolation: bool = False) -> tuple[Path, 
     compiler) it has no ABI/linkage implications for the rest of the
     build -- see CONDA_FORGE_BOOTSTRAP_PACKAGES's comment.
 
-    full_isolation=True (--system conda-full): confirmed working via a
+    full_isolation=True (--system conda-linux-full): confirmed working via a
     real clean-room build, 2026-07-23 (docs/PATHWAY_FORWARD.md). Uses
     conda-forge's own gfortran_linux-64/gxx_linux-64 packages -- these
     install target-triplet-prefixed binaries (x86_64-conda-linux-gnu-gcc
@@ -659,16 +696,16 @@ def _defuse_fake_lex_sources() -> None:
               f"committed {c_file.name}; see _defuse_fake_lex_sources)")
 
 
-# Real GMTSAR source bug found 2026-07-23 (a genuine --system conda-full
+# Real GMTSAR source bug found 2026-07-23 (a genuine --system conda-linux-full
 # clean-room build, not a fixture): gmtsar/fitoffset.c calls strlcpy()
 # with no declaration/include anywhere. Implicit-declaration is only a
 # WARNING on GCC < 14 (e.g. a system compiler), a HARD ERROR on GCC 14+
 # (conda-forge's gxx_linux-64 package is 15.2.0) -- GCC 14 promoted
 # implicit function declarations to an error by default, part of C23
-# alignment. NOT --system conda-full-specific: will also break --system
+# alignment. NOT --system conda-linux-full-specific: will also break --system
 # ubuntu on any host with GCC 14+ (Ubuntu 24.10+, Fedora 40+, Arch
 # already do). Applying this fix universally, not just under
-# conda-full, since it's a genuine correctness/portability fix with
+# conda-linux-full, since it's a genuine correctness/portability fix with
 # identical behavior on old compilers too (confirmed: compiles clean on
 # both GCC 11.4.0 and 15.2.0). See gmtsar/python/c_fixes/README.md.
 #
@@ -768,12 +805,12 @@ def do_build(use_conda: bool, conda_prefix: Path | None,
     # pthread-based FFTW spawns 14-19 threads per process and contends
     # across pipelines.
     #
-    # Real gap found 2026-07-23 (--system conda-full clean-room build):
+    # Real gap found 2026-07-23 (--system conda-linux-full clean-room build):
     # this used to hardcode literal "gcc" with no env= passed, so it
     # silently used the ambient PATH's (system) gcc even under
-    # conda-full -- on a box with genuinely no system compiler at all,
-    # that would fail despite conda-full's whole point being not to need
-    # one. Uses the resolved CC from build_env when set (conda-full),
+    # conda-linux-full -- on a box with genuinely no system compiler at all,
+    # that would fail despite conda-linux-full's whole point being not to need
+    # one. Uses the resolved CC from build_env when set (conda-linux-full),
     # else falls back to "gcc" (plain conda / ubuntu, where the system
     # compiler is assumed present anyway).
     py_dir = REPO_ROOT / "gmtsar" / "python"
@@ -853,14 +890,14 @@ def main() -> None:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--system", choices=["ubuntu", "conda", "conda-full"],
+    parser.add_argument("--system", choices=["ubuntu", "conda", "conda-linux-full"],
                         help="install everything for this system: system "
                              "deps (apt for ubuntu, a conda env -- created "
-                             "if missing -- for conda/conda-full), Python "
-                             "packages, and the in-place build. conda-full "
+                             "if missing -- for conda/conda-linux-full), Python "
+                             "packages, and the in-place build. conda-linux-full "
                              "additionally provisions the compiler/build-tool "
                              "chain via conda instead of assuming the system "
-                             "has it (see --system conda-full in this "
+                             "has it (see --system conda-linux-full in this "
                              "script's own docstring)")
     parser.add_argument("--conda-env", default="gmtsar",
                         help="conda env name for --system conda "
@@ -885,7 +922,7 @@ def main() -> None:
 
     _setup_log(args)
 
-    use_conda = args.system in ("conda", "conda-full")
+    use_conda = args.system in ("conda", "conda-linux-full")
     conda_prefix: Path | None = None
     extra_env: dict[str, str] = {}
 
@@ -895,10 +932,11 @@ def main() -> None:
     elif args.system == "conda":
         _check_system_build_tools()
         conda_prefix, extra_env = do_conda_setup(args.conda_env)
-    elif args.system == "conda-full":
-        # No _check_system_build_tools() -- conda-full provisions the
+    elif args.system == "conda-linux-full":
+        # No _check_system_build_tools() -- conda-linux-full provisions the
         # compiler/build-tool chain itself; do_conda_setup's own
         # _check_conda_full_isolation_tools() verifies THAT instead.
+        _check_conda_linux_full_platform()
         conda_prefix, extra_env = do_conda_setup(args.conda_env, full_isolation=True)
 
     if args.system is not None:
