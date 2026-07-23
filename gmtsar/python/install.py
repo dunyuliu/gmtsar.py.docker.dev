@@ -748,6 +748,7 @@ def do_windows_build(conda_prefix: Path) -> None:
                       f"'{label}' installed into the '{conda_prefix.name}' "
                       "conda env? (see WINDOWS_CONDA_BOOTSTRAP_PACKAGES)")
 
+    _apply_c_fixes()
     print(f"==> Building gmtsar (CMake/Ninja) in {REPO_ROOT} ...")
     build_dir = REPO_ROOT / "build-win"
     build_dir.mkdir(exist_ok=True)
@@ -957,6 +958,8 @@ def _defuse_fake_lex_sources() -> None:
 C_FIXES = {
     REPO_ROOT / "gmtsar" / "python" / "c_fixes" / "fitoffset.c":
         REPO_ROOT / "gmtsar" / "fitoffset.c",
+    REPO_ROOT / "gmtsar" / "python" / "c_fixes" / "conv.c":
+        REPO_ROOT / "gmtsar" / "conv.c",
 }
 
 
