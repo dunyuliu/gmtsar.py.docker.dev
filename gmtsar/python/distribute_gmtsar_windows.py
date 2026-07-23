@@ -497,11 +497,27 @@ def do_verify(dist: Path) -> None:
     env = {"PATH": isolated_path, "SystemRoot": system_root}
     failures = []
     for exe in sorted((dist / "bin").glob("*.exe")):
-        r = subprocess.run([str(exe)], capture_output=True, env=env, timeout=15,
-                            cwd=str(dist / "bin"))
-        # DLL-load failure is STATUS_DLL_NOT_FOUND (0xC0000135) or similar;
-        # a normal "Usage: ..." exit (whatever code) means it started fine.
-        if r.returncode in (-1073741515, 3221225781):
+        # stdin=DEVNULL: several gmtsar tools (esarp, conv's grd path, ...)
+        # read stdin when invoked bare -- with an inherited console handle
+        # they block forever, which a verify harness must not do. A closed
+        # stdin makes them hit EOF and exit immediately.
+        try:
+            r = subprocess.run([str(exe)], capture_output=True, env=env,
+                                timeout=15, cwd=str(dist / "bin"),
+                                stdin=subprocess.DEVNULL)
+            rc = r.returncode
+        except subprocess.TimeoutExpired:
+            # It RAN for 15s -- DLL resolution succeeded (a load failure is
+            # instant); it just doesn't exit without real input. That's a
+            # pass for what THIS check verifies (startability), not a hang
+            # of the harness. subprocess already killed the child.
+            _log(f"    note: {exe.name} ran past the 15s cap (waits for "
+                 "input) -- counted as started-OK, killed")
+            continue
+        # DLL-load failure is STATUS_DLL_NOT_FOUND (0xC0000135) or
+        # STATUS_INVALID_IMAGE_FORMAT (0xC000007B, 32/64 mismatch); a
+        # normal "Usage: ..." exit (whatever code) means it started fine.
+        if rc in (-1073741515, 3221225781, -1073741701, 3221225595):
             failures.append(exe.name)
     if failures:
         sys.exit(f"ERROR: these .exe failed to start under an isolated PATH "
