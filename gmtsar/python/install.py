@@ -641,6 +641,15 @@ def do_conda_setup(conda_env: str, full_isolation: bool = False) -> tuple[Path, 
 WINDOWS_CONDA_BOOTSTRAP_PACKAGES = [
     "gmt=6.4", "gshhg-gmt", "dcw-gmt", "libtiff>=4.5,<5", "openblas",
     "m2w64-toolchain", "cmake", "ninja",
+    # Same class of bug CONDA_FORGE_BOOTSTRAP_PACKAGES fixed in v2.9.0
+    # (see its own "pip" entry): python arrives transitively (gmt -> gdal
+    # -> python bindings) but pip is NOT guaranteed to -- and
+    # do_python_deps runs `python.exe -m pip install -r requirements.txt`,
+    # which dies with "No module named pip" on a genuinely fresh env.
+    # Every dev-machine test so far reused an env that already had pip
+    # from unrelated prior setup, masking this. Listing pip explicitly
+    # also guarantees python itself (pip depends on it).
+    "pip",
 ]
 
 
