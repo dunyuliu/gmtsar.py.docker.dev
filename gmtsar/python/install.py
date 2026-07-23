@@ -94,6 +94,7 @@ import datetime
 import json
 import os
 import platform
+import re
 import shutil
 import stat
 import subprocess
@@ -673,20 +674,46 @@ def _windows_env_paths(prefix: Path) -> dict[str, Path]:
 
 
 def _windows_conda_exe(conda_base: Path) -> Path:
-    conda_bat = conda_base / "condabin" / "conda.bat"
-    return conda_bat if conda_bat.is_file() else conda_base / "Scripts" / "conda.exe"
+    """Prefer Scripts\\conda.exe (a real PE executable, directly
+    CreateProcess-able) over condabin\\conda.bat. Real bug found
+    2026-07-23 by the first genuinely-fresh env creation (every earlier
+    run reused an existing env, so the create branch never executed):
+    the .bat route goes through `cmd /c`, and cmd PARSES the command
+    line -- a bare package spec like `libtiff>=4.5,<5` is read as
+    redirection operators (stdout to a file named `=4.5,`, stdin from a
+    file named `5`), failing in milliseconds with cmd's opaque 'The
+    system cannot find the file specified'. And it can't be cleanly
+    quoted from a subprocess argv list either: list2cmdline escapes
+    embedded quotes as \\", which cmd forwards through the .bat's %*
+    so the final conda argv gets LITERAL quote characters in the spec.
+    conda.exe sidesteps the whole class: no cmd, no metacharacter
+    parsing, list2cmdline handles it like any normal argv. (An earlier
+    docstring here claimed Scripts\\conda.exe 'only works once the env
+    is active' -- tested false on conda 26.5.3: --version, env list
+    --json, and create all work standalone.)"""
+    conda_scripts_exe = conda_base / "Scripts" / "conda.exe"
+    if conda_scripts_exe.is_file():
+        return conda_scripts_exe
+    return conda_base / "condabin" / "conda.bat"
 
 
 def _windows_conda_cmd(conda_exe: Path, args: list[str]) -> list[str]:
-    """conda.bat can't be exec'd directly via CreateProcess -- Windows
-    requires going through cmd.exe for .bat/.cmd files (a plain argv
-    list with shell=False, which run() uses, fails immediately with
-    'The system cannot find the file specified' even though the file
-    genuinely exists and is genuinely runnable from an interactive
-    prompt -- real bug hit standing this up). conda.exe (the alternate
-    binary some installs expose under Scripts\\) doesn't need this, but
-    routing both through cmd /c is harmless and keeps this one code
-    path uniform."""
+    """conda.exe: direct argv, no shell involved. conda.bat (fallback
+    for exotic installs with no Scripts\\conda.exe): must go through
+    cmd /c -- CreateProcess can't exec a .bat -- which re-parses the
+    command line; package specs containing cmd metacharacters (>,<,,)
+    CANNOT be passed reliably through that route (see
+    _windows_conda_exe's docstring), so fail loudly up front rather
+    than let cmd misparse them into redirections."""
+    if conda_exe.suffix.lower() == ".exe":
+        return [str(conda_exe)] + args
+    bad = [a for a in args if re.search(r'[><|&^]', a)]
+    if bad:
+        sys.exit(
+            f"ERROR: only condabin\\conda.bat was found ({conda_exe}), and "
+            f"these arguments cannot be passed reliably through cmd /c: "
+            f"{bad}. Install a conda providing Scripts\\conda.exe, or "
+            "create the env manually and re-run.")
     return ["cmd", "/c", str(conda_exe)] + args
 
 
