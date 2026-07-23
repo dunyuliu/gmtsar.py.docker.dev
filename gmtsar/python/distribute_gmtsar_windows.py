@@ -508,6 +508,80 @@ def do_write_launcher(dist: Path) -> None:
     _log(f"==> wrote {launcher}")
 
 
+# ---------------------------------------------------------------- step 5b ----
+
+def do_write_licenses(dist: Path, conda_env_path: Path) -> None:
+    """Collate third-party license attribution INTO the bundle -- required
+    before the zip can be publicly distributed (it redistributes GMT/LGPL,
+    ghostscript/AGPL, Git Bash + coreutils + MSYS2 runtime/GPLv3, GDAL,
+    openblas, the MSVC runtime, and GMTSAR itself/GPL-3). Reads license
+    metadata from the BUILD env's conda-meta (excluded from the packed
+    pyenv, so it must be captured here at build time)."""
+    import json as _json
+    notices = dist / "THIRD_PARTY_NOTICES.md"
+    rows = []
+    for f in sorted((conda_env_path / "conda-meta").glob("*.json")):
+        try:
+            d = _json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        rows.append((d.get("name", f.stem), d.get("version", "?"),
+                     d.get("license") or "see upstream",
+                     d.get("channel", "")))
+    lines = [
+        "# Third-party notices -- gmtsar-windows bundle",
+        "",
+        "This bundle redistributes unmodified binaries from the projects",
+        "below. Each remains under its own license; this file is the",
+        "attribution manifest.",
+        "",
+        "## GMTSAR (this project)",
+        "GPL-3.0 -- full text at `LICENSE.TXT` in this bundle. Complete",
+        "corresponding source: https://github.com/dunyuliu/gmtsar.py.docker.dev",
+        "(the git tag matching this bundle's version).",
+        "",
+        "## Git for Windows components (`git-bash/`)",
+        "bash, GNU coreutils, and the MSYS2 runtime (msys-2.0.dll) --",
+        "GPL-3.0+; license text at `git-bash/LICENSE.txt`. Source:",
+        "https://gitforwindows.org / https://www.msys2.org .",
+        "",
+        "## Microsoft Visual C++ runtime (`bin/vcruntime*.dll`, `bin/msvcp*.dll`)",
+        "Redistributed under Microsoft's Visual Studio runtime",
+        "redistribution terms (via conda-forge's vc14_runtime package).",
+        "",
+        "## NOTABLE: Ghostscript is AGPL-3.0",
+        "The bundled Python environment includes ghostscript (a GMT",
+        "dependency, used by `gmt psconvert`). AGPL obligations apply to",
+        "redistribution and to network service use built on it.",
+        "",
+        "## conda-forge packages (bundled Python environment + `bin/` DLLs)",
+        "Unmodified conda-forge builds; per-package source is available at",
+        "https://anaconda.org/conda-forge/<name>.",
+        "",
+        "| package | version | license |",
+        "|---|---|---|",
+    ]
+    lines += [f"| {n} | {v} | {lic} |" for n, v, lic, _c in rows]
+    notices.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    repo_license = REPO_ROOT / "LICENSE.TXT"
+    if repo_license.is_file():
+        shutil.copy2(repo_license, dist / "LICENSE.TXT")
+    git_license = Path(r"C:\Program Files\Git\LICENSE.txt")
+    if git_license.is_file():
+        (dist / "git-bash").mkdir(exist_ok=True)
+        shutil.copy2(git_license, dist / "git-bash" / "LICENSE.txt")
+    # Per-package license texts, where conda-forge installed them:
+    lic_src = conda_env_path / "Library" / "share" / "licenses"
+    if lic_src.is_dir():
+        dst = dist / "licenses"
+        if dst.exists():
+            shutil.rmtree(dst)
+        shutil.copytree(lic_src, dst)
+    _log(f"==> wrote {notices.name} ({len(rows)} packages), LICENSE.TXT, "
+         "git-bash/LICENSE.txt")
+
+
 # ---------------------------------------------------------------- step 6 ----
 
 def do_zip(dist: Path, output: Path) -> None:
@@ -642,6 +716,7 @@ def main() -> None:
     do_collect_dlls(gmtsar_bin, conda_env_path, objdump, dist / "bin")
     do_bundle_bash(dist, objdump, args.force)
     do_write_launcher(dist)
+    do_write_licenses(dist, conda_env_path)
 
     if args.verify:
         do_verify(dist)

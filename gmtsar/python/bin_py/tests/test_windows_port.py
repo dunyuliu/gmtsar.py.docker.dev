@@ -302,3 +302,14 @@ def test_verify_harness_survives_stdin_readers():
     src = inspect.getsource(dist_mod.do_verify)
     assert "DEVNULL" in src
     assert "TimeoutExpired" in src
+
+
+def test_bundle_writes_license_attribution():
+    """Publishing the bundle zip redistributes GMT/LGPL, ghostscript/AGPL,
+    Git Bash/GPLv3, GMTSAR/GPL-3 -- the license-collation step is a
+    release blocker, not a nicety (flagged in PATHWAY_FORWARD v2.10.2/3,
+    closed in v2.11.0)."""
+    src = inspect.getsource(dist_mod.do_write_licenses)
+    for needle in ("THIRD_PARTY_NOTICES", "conda-meta", "AGPL", "LICENSE.TXT"):
+        assert needle in src
+    assert "do_write_licenses" in inspect.getsource(dist_mod.main)

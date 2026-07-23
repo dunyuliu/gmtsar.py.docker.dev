@@ -61,8 +61,10 @@ not "verified"):
   `phasefilt.grd` **bit-identical** (complex-rms 0.0) to the clean-room
   sweep's mode0 reference. Remaining caveat: all runs were on the dev
   host; a physically different bare machine hasn't executed the bundle
-  yet, and the final `.zip` is produced on demand (run without
-  `--skip-zip`), not stored in the repo.
+  yet. v2.11.0 adds the license-collation step (`do_write_licenses`:
+  THIRD_PARTY_NOTICES.md from the env's conda-meta, GMTSAR GPL-3 text,
+  Git-for-Windows license, AGPL/ghostscript callout) and publishes the
+  zip as a GitHub release asset.
 
 ## Explored 2026-07-23: full conda toolchain isolation for `install.py --system conda`
 
