@@ -275,6 +275,18 @@ def locate_conda_base() -> Path:
 CONDA_FORGE_BOOTSTRAP_PACKAGES = [
     "gmt=6.4", "gshhg-gmt", "dcw-gmt", "flex",
     "hdf5=1.12.*", "libtiff>=4.5,<5", "liblapack>=3.9",
+    # Real bug found 2026-07-23 (a genuine --system conda-full clean-room
+    # env creation, not a fixture): python itself is pulled in
+    # transitively (via gdal's python bindings, a gmt dependency), but
+    # pip is NOT -- do_python_deps's `pip install -r requirements.txt`
+    # then fails with FileNotFoundError on bin/pip. Only went unnoticed
+    # on plain --system conda so far because every real test this
+    # session reused a pre-existing env that already had pip from an
+    # earlier, unrelated setup -- a genuinely fresh env for EITHER mode
+    # hits this. Listed explicitly rather than relying on transitive
+    # pull-in, which is not guaranteed to include pip on every channel/
+    # solver combination.
+    "pip",
 ]
 
 # --system conda-full only: the compiler/build-tool chain --system conda
@@ -755,10 +767,20 @@ def do_build(use_conda: bool, conda_prefix: Path | None,
     # runtime (LD_PRELOAD'd by runner.py). Without it, libgmt's
     # pthread-based FFTW spawns 14-19 threads per process and contends
     # across pipelines.
+    #
+    # Real gap found 2026-07-23 (--system conda-full clean-room build):
+    # this used to hardcode literal "gcc" with no env= passed, so it
+    # silently used the ambient PATH's (system) gcc even under
+    # conda-full -- on a box with genuinely no system compiler at all,
+    # that would fail despite conda-full's whole point being not to need
+    # one. Uses the resolved CC from build_env when set (conda-full),
+    # else falls back to "gcc" (plain conda / ubuntu, where the system
+    # compiler is assumed present anyway).
     py_dir = REPO_ROOT / "gmtsar" / "python"
-    run(["gcc", "-shared", "-fPIC", "-O2",
+    cc = (build_env or {}).get("CC", "gcc")
+    run([cc, "-shared", "-fPIC", "-O2",
          "-o", str(py_dir / "fftw_force_serial.so"),
-         str(py_dir / "fftw_force_serial.c")])
+         str(py_dir / "fftw_force_serial.c")], env=build_env)
 
 
 def do_orbits() -> None:
