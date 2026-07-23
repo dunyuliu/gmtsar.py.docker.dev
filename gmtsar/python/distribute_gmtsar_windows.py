@@ -3,7 +3,7 @@
 build into a single self-contained, relocatable bundle: no conda, no
 Git-for-Windows, nothing else required on the target machine.
 
-Precondition: `python gmtsar/python/install.py --system windows_conda` has
+Precondition: `python gmtsar/python/install.py --system conda-windows-full` has
 already been run successfully against THIS checkout (bin/, lib/, share/
 exist and work). This script does not build gmtsar -- it only packages an
 existing build. It never modifies install.py or the conda env it built
@@ -139,7 +139,7 @@ def check_preconditions(gmtsar_bin: Path) -> None:
         sys.exit(
             "ERROR: this checkout doesn't have a working native-Windows build "
             f"yet (missing: {', '.join(str(m) for m in missing)}). Run:\n"
-            "    python gmtsar/python/install.py --system windows_conda\n"
+            "    python gmtsar/python/install.py --system conda-windows-full\n"
             "first -- this script only packages an existing build, it doesn't "
             "create one.")
     conv_exe = gmtsar_bin / "conv.exe"

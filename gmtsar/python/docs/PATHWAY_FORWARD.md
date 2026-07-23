@@ -47,13 +47,10 @@ the rest correctly once the env is genuinely activated — no new code
 needed there, it was just easy to miss applying by hand during manual
 clean-room testing (cost real debugging time here).
 
-**Not wired into `install.py` as a real mode** (e.g. `--system
-conda-full`) — this session only confirmed feasibility. If picked up
-later: needs real env activation (unlike today's deliberate
-non-activation — see `do_conda_setup`'s docstring for why that was
-avoided) and the target-triplet compiler names
-(`x86_64-conda-linux-gnu-{cc,c++,gfortran}`), not plain
-`gcc`/`g++`/`gfortran`.
+**Since wired into `install.py` as a real mode**: `--system
+conda-linux-full` (v2.9.0), using real env activation and the
+target-triplet compiler names (`x86_64-conda-linux-gnu-{cc,c++,gfortran}`),
+not plain `gcc`/`g++`/`gfortran` — see `do_conda_setup`'s docstring.
 
 Also landed independently of this exploration: `install.py` now fails
 fast with a clear message if `gfortran`/`g++`/`make`/`autoconf`/`csh`/

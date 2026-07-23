@@ -8,7 +8,7 @@ Install location: the existing clone. This script never re-clones and
 never installs system-wide. `make install` lands in <repo>/bin via
 --prefix=<repo>.
 
-All three --system choices work on a brand-new box (nothing
+All four --system choices work on a brand-new box (nothing
 pre-installed beyond the OS package manager, or an already-installed
 Miniconda/Anaconda):
 
@@ -56,6 +56,23 @@ Miniconda/Anaconda):
                 bin/ automatically. See do_conda_setup's docstring for
                 what "full isolation" actually means here (real env
                 activation, not just extra PATH/CPPFLAGS/LDFLAGS).
+    conda-windows-full
+                native Windows -- no WSL, no MSYS2/Cygwin toolchain, no
+                admin/sudo. Named to match conda-linux-full: like that
+                mode, the compiler/build-tool chain is ALSO conda-
+                provided (m2w64-toolchain, cmake, ninja), since a bare
+                Windows box has no "system gfortran/g++" to fall back
+                on the way --system conda does on Linux/macOS -- there
+                is no partial/non-full Windows variant. Builds via
+                CMake/Ninja (this repo's ./configure && make path is
+                POSIX-shell/Makefile-only) against the conda env's
+                MinGW-w64 toolchain. Still requires Git for Windows
+                installed separately (for a real POSIX shell --
+                gmtsar_lib.py shells out via Git Bash for syntax
+                cmd.exe can't run) -- gmtsar/python/
+                distribute_gmtsar_windows.py packages a fully self-
+                contained bundle (bundled Git Bash included) for
+                machines without it.
 
 `--system` alone installs everything for that system: dependencies, Python
 packages, and the in-place build. Two optional add-ons:
@@ -144,7 +161,7 @@ BIN_PY_NAMES = [
 CONDA_SEARCH_BASES = ["~/anaconda3", "~/miniconda3", "/opt/conda"]
 
 IS_WINDOWS = sys.platform == "win32"
-# Extra search bases beyond CONDA_SEARCH_BASES for --system windows_conda:
+# Extra search bases beyond CONDA_SEARCH_BASES for --system conda-windows-full:
 # ~/anaconda3 etc. still apply (expands to C:\Users\<user>\anaconda3), but
 # Windows installs are commonly placed elsewhere (e.g. a non-system drive)
 # with no shell init sourced, so $CONDA_EXE/`conda` on PATH may be unset --
@@ -605,8 +622,8 @@ def do_conda_setup(conda_env: str, full_isolation: bool = False) -> tuple[Path, 
     return prefix, extra_env
 
 
-# ---------------------------------------------------------- windows_conda ----
-# Bootstrap set for --system windows_conda: same rationale as
+# ------------------------------------------------------ conda-windows-full ----
+# Bootstrap set for --system conda-windows-full: same rationale as
 # CONDA_FORGE_BOOTSTRAP_PACKAGES (gmt pinned for numerical parity; libtiff
 # pinned since it's linked into the C build), PLUS the actual Windows-
 # native build toolchain (m2w64-toolchain: MinGW-w64 gcc/gfortran/make;
@@ -700,7 +717,7 @@ def _ensure_python3_shim(conda_prefix: Path) -> None:
 
 
 def do_windows_conda_setup(conda_env: str) -> Path:
-    """Locate (or create) the conda env for --system windows_conda.
+    """Locate (or create) the conda env for --system conda-windows-full.
     Unlike do_conda_setup (Linux), this does NOT keep a separate system
     compiler in use -- a bare Windows box has no "system gfortran/gcc"
     equivalent to fall back on, so the conda env supplies the WHOLE
@@ -1159,16 +1176,16 @@ def main() -> None:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--system", choices=["ubuntu", "conda", "conda-linux-full", "windows_conda"],
+    parser.add_argument("--system", choices=["ubuntu", "conda", "conda-linux-full", "conda-windows-full"],
                         help="install everything for this system: system "
                              "deps (apt for ubuntu, a conda env -- created "
                              "if missing -- for conda/conda-linux-full/"
-                             "windows_conda), Python packages, and the "
+                             "conda-windows-full), Python packages, and the "
                              "in-place build. conda-linux-full additionally "
                              "provisions the compiler/build-tool chain via "
                              "conda instead of assuming the system has it "
                              "(see --system conda-linux-full in this "
-                             "script's own docstring). windows_conda is "
+                             "script's own docstring). conda-windows-full is "
                              "native Windows (no WSL, no sudo/admin) -- see "
                              "do_windows_build")
     parser.add_argument("--conda-env", default="gmtsar",
@@ -1189,20 +1206,20 @@ def main() -> None:
 
     if args.rebuild and args.system is None:
         sys.exit("ERROR: --rebuild requires --system ubuntu, conda, "
-                  "conda-linux-full, or windows_conda (needed to resolve "
+                  "conda-linux-full, or conda-windows-full (needed to resolve "
                   "build flags, e.g. the conda env's include/lib paths)")
 
-    if args.system == "windows_conda" and not IS_WINDOWS:
-        sys.exit("ERROR: --system windows_conda only makes sense when "
+    if args.system == "conda-windows-full" and not IS_WINDOWS:
+        sys.exit("ERROR: --system conda-windows-full only makes sense when "
                   f"running on Windows (sys.platform={sys.platform!r})")
     if args.system in ("ubuntu", "conda", "conda-linux-full") and IS_WINDOWS:
         sys.exit(f"ERROR: --system {args.system} targets POSIX (uses "
                   "./configure && make, apt, etc.) -- use --system "
-                  "windows_conda on native Windows instead")
+                  "conda-windows-full on native Windows instead")
 
     _setup_log(args)
 
-    use_conda = args.system in ("conda", "conda-linux-full", "windows_conda")
+    use_conda = args.system in ("conda", "conda-linux-full", "conda-windows-full")
     conda_prefix: Path | None = None
     extra_env: dict[str, str] = {}
 
@@ -1218,14 +1235,14 @@ def main() -> None:
         # _check_conda_full_isolation_tools() verifies THAT instead.
         _check_conda_linux_full_platform()
         conda_prefix, extra_env = do_conda_setup(args.conda_env, full_isolation=True)
-    elif args.system == "windows_conda":
+    elif args.system == "conda-windows-full":
         conda_prefix = do_windows_conda_setup(args.conda_env)
 
     if args.system in ("ubuntu", "conda", "conda-linux-full"):
         if not args.rebuild:
             do_python_deps(use_conda, conda_prefix)
         do_build(use_conda, conda_prefix, extra_env)
-    elif args.system == "windows_conda":
+    elif args.system == "conda-windows-full":
         if not args.rebuild:
             do_python_deps(use_conda, conda_prefix)
         do_windows_build(conda_prefix)

@@ -1,8 +1,8 @@
-# v2.10.0 — `--system windows_conda`: native Windows install (no WSL, no MSYS/Cygwin toolchain)
+# v2.10.0 — `--system conda-windows-full`: native Windows install (no WSL, no MSYS/Cygwin toolchain)
 
-## New: `--system windows_conda`
+## New: `--system conda-windows-full`
 
-`install.py --system windows_conda` builds and runs GMTSAR natively on
+`install.py --system conda-windows-full` builds and runs GMTSAR natively on
 Windows — no WSL, no MSYS2/Cygwin userland, no admin rights. Bootstraps
 a conda env with the Windows-native build toolchain
 (`m2w64-toolchain`, `cmake`, `ninja`, plus `gmt`/`openblas`/`libtiff`
@@ -190,7 +190,7 @@ platform, just never triggered on POSIX:
 
 ## `gmtsar/python/distribute_gmtsar_windows.py` (new, WIP)
 
-Packages a working `--system windows_conda` build into a self-
+Packages a working `--system conda-windows-full` build into a self-
 contained, relocatable bundle — no conda, no Git for Windows required
 on the target machine:
 
@@ -222,7 +222,7 @@ release's scope.
 
 ## Release-boundary verification (this release)
 
-`install.py --system windows_conda` from a **fully clean slate**
+`install.py --system conda-windows-full` from a **fully clean slate**
 (`bin/`, `lib/`, `share/`, `build-win/` all wiped, not just
 `--rebuild`): 159/159 CMake/Ninja build steps, 0 errors, all 41 `.exe`
 files + `share/gmtsar` data + Python/`.csh` staging installed
@@ -249,7 +249,7 @@ checks described above.
 
 ## Commits
 
-`v2.9.0`..`v2.10.0`: the `windows_conda` work (previously developed
+`v2.9.0`..`v2.10.0`: the `conda-windows-full` work (previously developed
 against a shallow clone of upstream `gmtsar/gmtsar` at the commit
 matching this fork's own `v2.8.0`, rebased onto `v2.8.0` directly) plus
 this release's merge of `v2.9.0`'s `conda-linux-full` work.

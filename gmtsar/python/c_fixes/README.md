@@ -39,7 +39,7 @@ CMake runs) -- not yet contributed upstream to the real
 
 ## conv.c — binary file reads opened in text mode (Windows)
 
-Found 2026-07-23 while bringing up `--system windows_conda` (native
+Found 2026-07-23 while bringing up `--system conda-windows-full` (native
 Windows build, MinGW toolchain). `gmtsar/conv.c` opens the raw complex
 SLC file and the `.grd=bf` native-binary-float file with `fopen(path,
 "r")` -- **text mode**. On POSIX this is a no-op (`"r"` and `"rb"` are
