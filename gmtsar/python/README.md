@@ -102,7 +102,7 @@ Iterating on source later (skip the dependency steps, just rebuild):
 python3 gmtsar/python/install.py --system conda --rebuild
 ```
 
-Other flags: `--conda-env <name>` (default env name `gmtsar`), `--orbits` (fetch the ~5-7 GB `ORBITS.tar`, optional, can run alone). Run `install.py --help` for full details. (Old bash version archived at `gmtsar/python/archive/install.sh`.)
+Other flags: `--conda-env <name>` (default env name `gmtsar`; pass `current` to install directly into whatever conda env is already active in your shell instead of creating/using a separate `gmtsar`-named env), `--orbits` (fetch the ~5-7 GB `ORBITS.tar`, optional, can run alone). Run `install.py --help` for full details. (Old bash version archived at `gmtsar/python/archive/install.sh`.)
 
 Every run writes a full, timestamped log — every command, real output, elapsed time, exit code — to `gmtsar/python/install_logs/install_<UTC timestamp>.log` (path also printed at the end), so a failure can be traced without re-running.
 
