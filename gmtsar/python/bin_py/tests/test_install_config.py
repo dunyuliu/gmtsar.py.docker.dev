@@ -35,6 +35,42 @@ def test_hdf5_pinned_to_1_12_not_1_14_plus():
         "reintroduce the 1.14.x link failure")
 
 
+def _requirements_txt_lines():
+    req = install.REPO_ROOT / "gmtsar" / "python" / "requirements.txt"
+    return req.read_text().splitlines()
+
+
+def test_numpy_pinned_ge2_not_reverted():
+    """numpy<2 was pinned with NO documented reason (unlike every other
+    pin in requirements.txt) until a real external report (InSARHub,
+    a downstream consumer wanting numpy>=2 for its own dependencies)
+    prompted actually testing it instead of assuming it was needed.
+    Confirmed via a genuine clean-room build: fresh env, numpy 2.4.6,
+    full bin_py/tests/ suite (562 passed/59 skipped/0 failed) INCLUDING
+    the real C-vs-Python xcorr parity test against real data --
+    bit/float-exact, no numerical drift. See release_notes_v2.12.0.md."""
+    numpy_lines = [l for l in _requirements_txt_lines() if l.startswith("numpy")]
+    assert numpy_lines, "numpy must be pinned in requirements.txt"
+    assert numpy_lines[0].split()[0] == "numpy>=2", (
+        f"numpy pin changed to {numpy_lines[0]!r} -- if this reverts to "
+        "numpy<2 without a real reason, it silently drops a real, "
+        "tested compatibility improvement for downstream consumers")
+
+
+def test_numba_floor_ge_0_60_for_numpy2_abi():
+    """numba<0.60 caps numpy well below 2.0 in its own PyPI metadata
+    (0.56.4: numpy<1.24; 0.59.x: numpy<1.27) -- numba only gained real
+    numpy 2.x ABI support at 0.60.0. Doesn't bite in today's normal
+    resolve (nothing else forces an old numba), but a real risk in an
+    offline/locked install pinning numba<0.60 alongside numpy>=2."""
+    numba_lines = [l for l in _requirements_txt_lines() if l.startswith("numba")]
+    assert numba_lines, "numba must be pinned in requirements.txt"
+    assert numba_lines[0].split()[0] == "numba>=0.60", (
+        f"numba floor changed to {numba_lines[0]!r} -- if this drops "
+        "below 0.60 while numpy stays >=2, an offline/locked install "
+        "can silently pick a numpy2-incompatible numba")
+
+
 def test_flex_in_apt_system_deps():
     """preproc/ERS_preproc/ers_line_fixer/ers_line_fixer.l is the only
     .l/.y source in the repo and needs flex/lex to generate its .c file.
