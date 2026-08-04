@@ -19,7 +19,10 @@ LAPACK builds.
 **Open**
 - [ ] File the three C defects upstream (`-atm n>=2` uninitialized G; `jpvt`
       never reset; `sbas_utils.c` malloc vs `sbas_parallel.c` calloc)
-- [ ] Wire into `utils/`, add a `tests/` case, add to the sweep
+- [x] Wired in behind `utils/sbas` (Python default; C fallback for
+      `-atm n>=2` and `GMTSAR_SBAS_PY=0`, reason printed each time)
+- [x] `bin_py/tests/test_sbas_py.py` — 14 regression guards
+- [ ] Add a sweep case (needs the 1.1 GB Indio set in the cache)
 - [ ] Verify on a second dataset; only Indio so far
 - [ ] `sbas_parallel` untested
 - [ ] No optimisation attempted (Rule 7: verbatim first)
