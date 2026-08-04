@@ -1,5 +1,32 @@
 # Pathway forward — what's ported, what's not, and why
 
+## In progress 2026-08-04: `sbas` time-series solver ported to Python
+
+`bin_py/sbas_py/sbas_ref.py`. Oracle = the C binary on the ALOS Indio SBAS set.
+Full detail, including three defects found in the C, in
+[`dev_notes/NOTES_SBAS.md`](dev_notes/NOTES_SBAS.md).
+
+**Done** — 8 of 9 flags at bit-parity (compare.py `DEFAULT_GRD_RMS` 1e-2):
+`-rms`, `-dem`, `-smooth` (0 and 1), `-wavelength`, `-incidence`, `-range`,
+`-mmap`, `-atm 1`. Six APS helpers covered end to end by the `-atm 1` run and
+unit-checked against the C's printed `atm_noise` values. 48 s vs the C's 28 s.
+
+**Not supported** — `-atm n>=2`. Not a porting gap: `init_G_ts` never clears G
+and `init_array_ts` is not called inside the atm loop, so iteration 2 builds on
+the QR debris `dgelsy` left in G. The C's own output is not reproducible across
+LAPACK builds.
+
+**Open**
+- [ ] File the three C defects upstream (`-atm n>=2` uninitialized G; `jpvt`
+      never reset; `sbas_utils.c` malloc vs `sbas_parallel.c` calloc)
+- [ ] Wire into `utils/`, add a `tests/` case, add to the sweep
+- [ ] Verify on a second dataset; only Indio so far
+- [ ] `sbas_parallel` untested
+- [ ] No optimisation attempted (Rule 7: verbatim first)
+- [ ] Rest of the SBAS chain (`get_baseline_table`, `baseline_table`,
+      `select_pairs`, `prep_sbas`, `intf_batch`, `intf_tops`,
+      `preproc_batch_tops`, `stack_corr`) ported but never run against csh
+
 ## Landed 2026-07-23 (v2.10.x): native Windows — `install.py --system conda-windows-full`
 
 GMTSAR now builds and runs natively on Windows — no WSL, no
