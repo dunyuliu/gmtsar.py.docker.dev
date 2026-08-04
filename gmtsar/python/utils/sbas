@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+"""sbas — SBAS time-series inversion.
+
+Dispatches to the Python port (bin_py/sbas_py/sbas_ref.py) or the C `sbas`
+binary. Same CLI as the C, so this is a drop-in replacement.
+
+    sbas intf.tab scene.tab N S xdim ydim [-smooth sf] [-wavelength wl]
+         [-incidence theta] [-range rng] [-atm n] [-robust] [-rms] [-dem] [-mmap]
+
+Selection (project_rules.md Rule 13 — ported and wired-ON are different states):
+
+  * Python by default. Bit-parity vs the C is verified for 8 of the 9 flags on
+    the ALOS Indio SBAS set — see bin_py/sbas_py/README.md.
+  * `-atm n` with n >= 2 ALWAYS falls back to C. Not a porting gap: the C's
+    init_G_ts never clears G and init_array_ts is not called inside the atm
+    loop, so iteration 2 builds its design matrix on the QR factorization
+    dgelsy left behind. That output is not reproducible across LAPACK builds,
+    so there is nothing stable to match. See docs/dev_notes/NOTES_SBAS.md.
+  * GMTSAR_SBAS_PY=0 forces C for everything (debug / regression A/B).
+
+No silent fallback (Rule 1): every fallback prints why, on stderr.
+"""
+import os
+import shutil
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+SBAS_PY = os.path.join(HERE, "..", "bin_py", "sbas_py", "sbas_ref.py")
+
+
+def _n_atm(argv):
+    """Value of -atm, or 0 when absent/unparseable."""
+    for i, a in enumerate(argv):
+        if a == "-atm" and i + 1 < len(argv):
+            try:
+                return int(argv[i + 1])
+            except ValueError:
+                return 0
+    return 0
+
+
+def _exec_c(argv):
+    """Hand off to the C binary, or fail loudly if it is not on PATH (Rule 1)."""
+    if shutil.which("sbas") is None:
+        sys.exit("sbas: the C `sbas` binary is not on PATH and is required here")
+    os.execvp("sbas", ["sbas"] + argv)
+
+
+def main():
+    argv = sys.argv[1:]
+    if len(argv) < 6:
+        _exec_c(argv)                           # let the C print its own usage
+
+    reason = None
+    if os.environ.get("GMTSAR_SBAS_PY", "1") == "0":
+        reason = "GMTSAR_SBAS_PY=0"
+    elif _n_atm(argv) >= 2:
+        reason = (f"-atm {_n_atm(argv)} (>=2) has no reproducible reference; "
+                  "see docs/dev_notes/NOTES_SBAS.md")
+
+    if reason:
+        print(f"sbas: using the C binary -- {reason}", file=sys.stderr)
+        _exec_c(argv)
+
+    sys.path.insert(0, os.path.join(HERE, "..", "bin_py", "sbas_py"))
+    import sbas_ref
+    sys.exit(sbas_ref.main(argv))
+
+
+if __name__ == "__main__":
+    main()
