@@ -1,5 +1,8 @@
 # GMTSAR Python framework
 
+Funding
+The development of GMTSAR Python Framework was supported by the National Science Foundation CSSI Program Grant Nos. 2209807 and 2209808, July 2022 – June 2026.
+
 Python implementations of GMTSAR's heavy per-pixel **compute kernels** (cross-
 correlation, phase difference, resampling, SAT geometry, biharmonic surface,
 blockmedian, phase filter, plus selected grdmath/grdsample operators), wired
