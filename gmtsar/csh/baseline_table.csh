@@ -3,11 +3,13 @@
 #
 #  April 21, 1999 - David T. Sandwell
 #  May 23, 2017 - Anders Hogrelius, updated to fully support Envisat formatted SLC data
+#  August 12, 2026 - DTS changed to use mktime which requires gawk
 #
 #  Script to calculate a table of parameters from master and
 #  aligned PRM files.
 #
 unset noclobber
+setenv TZ UTC
 #
 #  Modified by M.Wei to add ALOS function, 9/27/06
 #
@@ -48,40 +50,40 @@ set ERSSLC = `echo $1|cut -c1-10`
 #
 if ($SSC == 1 || $SSC == 2) then
  SAT_baseline $1 $2 > temp
- set t0 = `echo "" | awk '{print mktime("1992 01 01 00 00 00")}'`
+ set t0 = `echo "" | gawk '{print mktime("1992 01 01 00 00 00")}'`
  @ YR = $T0  / 1000
- set t1 = `echo "" | awk '{print mktime("'$YR' 01 01 00 00 00")}'`
+ set t1 = `echo "" | gawk '{print mktime("'$YR' 01 01 00 00 00")}'`
  set YDAY = `echo $t0 $t1 | awk '{printf("%d",int(($2-$1)/86400.0+0.5)+'$DAY'-1)}'`
 else if ($SSC == 4 || $SSC == 6) then
  SAT_baseline $1 $2 > temp
- set t0 = `echo "" | awk '{print mktime("1992 01 01 00 00 00")}'`
+ set t0 = `echo "" | gawk '{print mktime("1992 01 01 00 00 00")}'`
  @ YR = $T0  / 1000
- set t1 = `echo "" | awk '{print mktime("'$YR' 01 01 00 00 00")}'`
+ set t1 = `echo "" | gawk '{print mktime("'$YR' 01 01 00 00 00")}'`
  set YDAY = `echo $t0 $t1 | awk '{printf("%d",int(($2-$1)/86400.0+0.5)+'$DAY'-1)}'`
 else if ($SSC == 5) then
  SAT_baseline $1 $2 > temp
  @ YR1 = $T0 / 1000
  if ($YR1 < 2013) then
-  set t0 = `echo "" | awk '{print mktime("2006 01 01 00 00 00")}'`
+  set t0 = `echo "" | gawk '{print mktime("2006 01 01 00 00 00")}'`
  else
-  set t0 = `echo "" | awk '{print mktime("2014 01 01 00 00 00")}'`
+  set t0 = `echo "" | gawk '{print mktime("2014 01 01 00 00 00")}'`
  endif
  @ YR = $T0  / 1000
- set t1 = `echo "" | awk '{print mktime("'$YR' 01 01 00 00 00")}'`
+ set t1 = `echo "" | gawk '{print mktime("'$YR' 01 01 00 00 00")}'`
  set YDAY = `echo $t0 $t1 | awk '{printf("%d",int(($2-$1)/86400.0+0.5)+'$DAY'-1)}'`
 else
  SAT_baseline $1 $2 > temp
  if ($SSC == 7 || $SSC == 8) then
-  set t0 = `echo "" | awk '{print mktime("2007 01 01 00 00 00")}'`
+  set t0 = `echo "" | gawk '{print mktime("2007 01 01 00 00 00")}'`
  else if ($SSC == 9) then
-  set t0 = `echo "" | awk '{print mktime("2008 01 01 00 00 00")}'`
+  set t0 = `echo "" | gawk '{print mktime("2008 01 01 00 00 00")}'`
  else if ($SSC == 10) then
-  set t0 = `echo "" | awk '{print mktime("2014 01 01 00 00 00")}'`
+  set t0 = `echo "" | gawk '{print mktime("2014 01 01 00 00 00")}'`
  else
-  set t0 = `echo "" | awk '{print mktime("2020 01 01 00 00 00")}'`
+  set t0 = `echo "" | gawk '{print mktime("2020 01 01 00 00 00")}'`
  endif
  @ YR = $T0  / 1000
- set t1 = `echo "" | awk '{print mktime("'$YR' 01 01 00 00 00")}'`
+ set t1 = `echo "" | gawk '{print mktime("'$YR' 01 01 00 00 00")}'`
  set YDAY = `echo $t0 $t1 | awk '{printf("%d",int(($2-$1)/86400.0+0.5)+'$DAY')}'`
 endif
 #
