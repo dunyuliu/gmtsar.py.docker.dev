@@ -986,6 +986,20 @@ def patch_config_mk(config_mk: Path, use_conda: bool,
         lines = _patch_config_mk_line(lines, "TIFF_LIB", str(conda_prefix / "lib"))
         lines = _patch_config_mk_line(lines, "HDF5_CPPFLAGS", f"-I{conda_prefix}/include")
         lines = _patch_config_mk_line(lines, "HDF5_LDFLAGS", f"-L{conda_prefix}/lib")
+        # LDFLAGS carries configure-time -L/-rpath to the conda lib dir.
+        # Since config.mk is never regenerated, a moved or recreated env
+        # leaves every binary with a dead RUNPATH (`libgmt.so.6 => not
+        # found`). Replace those two path tokens; keep the rest (-s, the
+        # empty `-Wl,-rpath,`, muldefs).
+        for i, line in enumerate(lines):
+            key, sep, val = line.partition("=")
+            if sep and key.strip() == "LDFLAGS":
+                keep = [t for t in val.split()
+                        if not (t.startswith("-L") and len(t) > 2)
+                        and not (t.startswith("-Wl,-rpath,") and len(t) > len("-Wl,-rpath,"))]
+                new = [f"-L{conda_prefix}/lib", f"-Wl,-rpath,{conda_prefix}/lib"] + keep
+                lines[i] = f"{key.rstrip()}\t\t= {' '.join(new)}\n"
+                break
     if not any("-Wl,-z,muldefs" in line for line in lines):
         for i, line in enumerate(lines):
             if line.split("=", 1)[0].strip() == "LDFLAGS":
@@ -1126,7 +1140,13 @@ def do_build(use_conda: bool, conda_prefix: Path | None,
                 # in do_conda_setup for the real bug this closes).
                 configure_cmd.append(f"--with-hdf5={h5cc}")
         run(configure_cmd, env=build_env)
+    before = config_mk.read_text()
     patch_config_mk(config_mk, use_conda, conda_prefix)
+    if config_mk.read_text() != before:
+        # Link flags aren't a make prerequisite, so up-to-date binaries
+        # would keep the old RUNPATH. Force a full relink.
+        print("==> config.mk changed (e.g. conda env moved); make clean to relink")
+        run(["make", "clean"], env=build_env)
 
     # Sequential build: gmtsar's recursive Makefile has cross-dir
     # dependencies (preproc/* links against ../../gmtsar/libgmtsar) that

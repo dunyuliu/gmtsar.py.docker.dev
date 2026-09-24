@@ -404,3 +404,22 @@ def test_root_readme_is_pure_ascii():
 if __name__ == "__main__":
     import pytest
     sys.exit(pytest.main([__file__, "-v"]))
+
+
+def test_patch_config_mk_repoints_stale_ldflags_rpath(tmp_path):
+    """config.mk is never regenerated, so a moved/recreated conda env must
+    not leave LDFLAGS' -L/-rpath (and hence every binary's RUNPATH) on the
+    old prefix -- that produced `libgmt.so.6 => not found` after a conda
+    reorg while GMT_LIB was already repointed."""
+    old, new = "/old/anaconda3/envs/gmtsar", tmp_path / "envs" / "gmtsar"
+    mk = tmp_path / "config.mk"
+    mk.write_text(
+        f"GMT_LIB = -L{old}/lib -lgmt\n"
+        f"LDFLAGS\t\t= -L{old}/lib -Wl,-rpath,{old}/lib -s -Wl,-rpath, -Wl,-z,muldefs\n")
+    install.patch_config_mk(mk, True, new)
+    ld = [l for l in mk.read_text().splitlines() if l.startswith("LDFLAGS")][0]
+    assert old not in mk.read_text()
+    assert f"-L{new}/lib" in ld and f"-Wl,-rpath,{new}/lib" in ld
+    for keep in ("-s", "-Wl,-rpath,", "-Wl,-z,muldefs"):
+        assert keep in ld.split()
+    assert ld.count("muldefs") == 1
