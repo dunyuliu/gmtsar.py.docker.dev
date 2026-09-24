@@ -267,7 +267,7 @@ below is tagged with exactly one:
 
 | Module | State | Evidence | Dispatcher |
 |---|---|---|---|
-| `xcorr_py` | [1-ON] | ~30x faster (2026-07-12); **flagged 2026-07-13 for re-check under a quiet system, see Rule 12c and "Tried, kept on C" below** — real pipeline's own C-binary timer shows a much smaller gap on RS2 | `p2p_stages.py`, unconditional |
+| `xcorr_py` | [1-ON] | ~30x faster (2026-07-12); **flagged 2026-07-13 for re-check under a quiet system, see Rule 12c and "Tried, kept on C" below** — real pipeline's own C-binary timer shows a much smaller gap on RS2. **Parallel over y bands (2026-09-24), `XCORR_PY_PROCS` (default 8; 1 = serial; serial fallback where `fork` is unavailable)**: stale fread buffer + highres `md` buffer stay serial in the parent, so output is byte-identical to the serial port on CSK_SLC_Italy / RS2_SLC_Hawaii / NISAR_Ethiopia and on a forced-OOB RS2 pair (5 partial + 1 fully OOB band); CSK 24.5 s → 4.1 s (8 procs), 2.3 s (24). Guard: `test_xcorr.py::TestParallelMatchesSerial`. Vs-C re-check still pending — C binaries currently can't load `libgmt.so.6` on this host | `p2p_stages.py`, unconditional |
 | `resamp_py` | [1-ON] | ~1.3x faster, byte-identical (re-wired 2026-07-12, was OFF-lost as v2) | `p2p_stages.py`, unconditional |
 | `SAT_llt2rat_py_v2` | [1-ON] | +7.6% vs v1, ties C, no NFS instability (verified 2026-07-12) | `install.sh` symlink, unconditional |
 | `gmt_surface_py` | [1-ON, correctness only] | C 269s vs py 412s — C faster; wired for bit-parity, not speed | `dem2topo_ra`/`align_tops`/`proj_ll2ra`/`tide_correction` |

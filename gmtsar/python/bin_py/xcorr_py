@@ -301,6 +301,24 @@ def _process_location(xc: XCorr, x: int, y: int, mask: np.ndarray,
                       ) -> tuple[float, float, float, float, float]:
     """Mirror assign_values + do_freq_corr + calc_time_corr + highres_corr
     for one location. Returns (xoff, yoff, xfrac, yfrac, corr)."""
+    xoff, yoff, max_corr, win = _correlate_location(xc, x, mask, d1_row, d2_row)
+    if win is not None:
+        xfrac, yfrac = _highres_from_window(xc, *win)
+    else:
+        xfrac = yfrac = 0.0
+    return xoff, yoff, xfrac, yfrac, max_corr
+
+
+def _correlate_location(xc: XCorr, x: int, mask: np.ndarray,
+                        d1_row: np.ndarray, d2_row: np.ndarray):
+    """Stateless part of one location: assign_values + do_freq_corr +
+    calc_time_corr, plus the n2y x n2x window of the rescaled correlation
+    surface that do_highres_corr reads. Touches no persistent state, so it
+    can run in any order or in a worker process; the stateful highres step
+    (`_highres_from_window`) must still run in location order.
+
+    Returns (xoff, yoff, max_corr, win) with win = (vals, valid) or None
+    when interp_flag is off."""
     npx, npy = xc.npx, xc.npy
     nxc, nyc = xc.nxc, xc.nyc
 
@@ -372,11 +390,11 @@ def _process_location(xc: XCorr, x: int, y: int, mask: np.ndarray,
     yoff = float(-ipeak)
 
     if xc.interp_flag == 1:
-        xfrac, yfrac = _do_highres_corr(xc, corr_scaled, xoff, yoff)
+        win = _highres_window(xc, corr_scaled, xoff, yoff)
     else:
-        xfrac = yfrac = 0.0
+        win = None
 
-    return xoff, yoff, xfrac, yfrac, max_corr
+    return xoff, yoff, max_corr, win
 
 
 def _do_highres_corr(xc: XCorr, corr_scaled: np.ndarray,
@@ -403,15 +421,15 @@ def _do_highres_corr(xc: XCorr, corr_scaled: np.ndarray,
        low-SNR edge-of-field rows trigger the `k < 0` path.  We replicate C
        by checking only `k < 0`, not the upper bound.
     """
-    ifc = xc.interp_factor
+    return _highres_from_window(xc, *_highres_window(xc, corr_scaled, xoff, yoff))
+
+
+def _highres_window(xc: XCorr, corr_scaled: np.ndarray,
+                    xoff: float, yoff: float) -> tuple[np.ndarray, np.ndarray]:
+    """Stateless half of do_highres_corr: the n2y x n2x values of the
+    (padded) correlation surface that C reads into xc->md, and which of
+    them C writes (k >= 0). See `_do_highres_corr` for the C semantics."""
     nx = xc.n2x; ny = xc.n2y
-    nx2 = ifc * nx; ny2 = ifc * ny
-
-    # Allocate or reuse the persistent md buffer (never re-zeroed between calls).
-    if xc._md_buf is None or xc._md_buf.shape != (ny, nx):
-        xc._md_buf = np.zeros((ny, nx), dtype=np.complex64)
-    md = xc._md_buf
-
     jc = (xc.nxc // 2) - nx // 2 - int(xoff)
     ic = (xc.nyc // 2) - ny // 2 - int(yoff)
 
@@ -431,13 +449,36 @@ def _do_highres_corr(xc: XCorr, corr_scaled: np.ndarray,
     corr_flat[:n_corr] = corr_scaled.ravel()
     corr_flat[n_corr:] = 0.0  # pad remainder with 0 (conservative: C reads heap-dependent values)
 
+    vals = np.zeros((ny, nx), dtype=np.float64)
+    valid = np.zeros((ny, nx), dtype=bool)
     for i in range(ny):
         kr = ic + i
         for j in range(nx):
             k = kr * xc.nxc + (jc + j)
             if k < 0:
                 continue
-            md[i, j] = np.complex64(corr_flat[k] ** 0.25)
+            vals[i, j] = corr_flat[k]
+            valid[i, j] = True
+    return vals, valid
+
+
+def _highres_from_window(xc: XCorr, vals: np.ndarray, valid: np.ndarray
+                         ) -> tuple[float, float]:
+    """Stateful half of do_highres_corr: updates the persistent md buffer
+    and returns (xfrac, yfrac). Must be called in location order."""
+    ifc = xc.interp_factor
+    nx = xc.n2x; ny = xc.n2y
+    nx2 = ifc * nx; ny2 = ifc * ny
+
+    # Allocate or reuse the persistent md buffer (never re-zeroed between calls).
+    if xc._md_buf is None or xc._md_buf.shape != (ny, nx):
+        xc._md_buf = np.zeros((ny, nx), dtype=np.complex64)
+    md = xc._md_buf
+
+    for i in range(ny):
+        for j in range(nx):
+            if valid[i, j]:
+                md[i, j] = np.complex64(vals[i, j] ** 0.25)
 
     cd_exp = _fft_interpolate_2d(md, ny2, nx2, ifc)
 
@@ -561,6 +602,53 @@ class _StaleRowReader:
             out[i] = self.tmp
         return out
 
+    def advance(self, iy: int, npy: int) -> np.ndarray | None:
+        """Same state transition as `read`, but for a fully in-range band
+        return None instead of copying it: the caller slices the memmap
+        itself (same bytes). OOB bands are materialized via `read`."""
+        if 0 <= iy and iy + npy <= self.mm.shape[0]:
+            self.tmp = np.asarray(self.mm[iy + npy - 1]).copy()
+            return None
+        return self.read(iy, npy)
+
+
+# ------------------------------------------------ parallel band workers ---
+# Only the stateless per-location correlation runs in workers. The two
+# pieces of C state the oracle depends on -- the stale fread buffer
+# (_StaleRowReader) and the never-cleared highres md buffer (_md_buf) --
+# stay in the parent and are advanced in the original location order, so
+# the output is byte-identical to the serial path.
+_POOL_STATE: dict = {}
+
+
+def _n_procs(xc: XCorr) -> int:
+    n = int(os.environ.get("XCORR_PY_PROCS", "8"))
+    n = max(1, min(n, os.cpu_count() or 1, xc.nyl))
+    if n > 1:
+        import multiprocessing as mp
+        if "fork" not in mp.get_all_start_methods():
+            print("xcorr_py: fork unavailable on this platform, running "
+                  "serially (XCORR_PY_PROCS ignored)", file=sys.stderr)
+            return 1
+    return n
+
+
+def _worker_init() -> None:
+    global _W
+    if _W:
+        _W = 1          # parallelism is across bands, not inside each FFT
+
+
+def _band_task(task):
+    iloc0, iy_m, iy_a, d1, d2 = task
+    xc = _POOL_STATE["xc"]; mask = _POOL_STATE["mask"]
+    if d1 is None:
+        d1 = np.asarray(xc.mm1[iy_m:iy_m + xc.npy])
+    if d2 is None:
+        d2 = np.asarray(xc.mm2[iy_a:iy_a + xc.npy])
+    return [_correlate_location(xc, int(xc.loc[iloc0 + k, 0]), mask, d1, d2)
+            for k in range(xc.nxl)]
+
 
 def do_correlation(xc: XCorr, out_path: str) -> None:
     """Mirror xcorr.c:do_correlation. Outer y loop reads npy lines of
@@ -575,6 +663,10 @@ def do_correlation(xc: XCorr, out_path: str) -> None:
     mask = make_mask(xc)
     reader_m = _StaleRowReader(xc.mm1)
     reader_a = _StaleRowReader(xc.mm2)
+    nproc = _n_procs(xc)
+    if nproc > 1:
+        _do_correlation_parallel(xc, out_path, mask, reader_m, reader_a, nproc)
+        return
     with open(out_path, "w") as f:
         iloc = 0
         for j_y in range(xc.nyl):
@@ -597,6 +689,46 @@ def do_correlation(xc: XCorr, out_path: str) -> None:
                 f.write(f" {x} {xoff_out:6.3f} {y} {yoff_out:6.3f} "
                         f"{corr:6.2f} \n")
                 iloc += 1
+
+
+def _do_correlation_parallel(xc: XCorr, out_path: str, mask: np.ndarray,
+                             reader_m: _StaleRowReader,
+                             reader_a: _StaleRowReader, nproc: int) -> None:
+    """do_correlation with the per-location correlation farmed out to
+    `nproc` forked workers, one y band per task. Band reads and the
+    highres step run in the parent in the serial order (see _POOL_STATE)."""
+    import multiprocessing as mp
+
+    def bands():
+        for j_y in range(xc.nyl):
+            iloc0 = j_y * xc.nxl
+            y = int(xc.loc[iloc0, 1])
+            iy_m = y - xc.npy // 2
+            iy_a = y + xc.y_offset + int(y * xc.astretcha) - xc.npy // 2
+            yield (iloc0, iy_m, iy_a,
+                   reader_m.advance(iy_m, xc.npy),
+                   reader_a.advance(iy_a, xc.npy))
+
+    _POOL_STATE.update(xc=xc, mask=mask)
+    try:
+        with mp.get_context("fork").Pool(nproc, initializer=_worker_init) as pool, \
+                open(out_path, "w") as f:
+            for j_y, res in enumerate(pool.imap(_band_task, bands())):
+                iloc0 = j_y * xc.nxl
+                y = int(xc.loc[iloc0, 1])
+                ishft = int(y * xc.astretcha)
+                for k, (xoff, yoff, max_corr, win) in enumerate(res):
+                    x = int(xc.loc[iloc0 + k, 0])
+                    if win is not None:
+                        xfrac, yfrac = _highres_from_window(xc, *win)
+                    else:
+                        xfrac = yfrac = 0.0
+                    xoff_out = (xoff / xc.ri) - (xfrac / xc.ri) + xc.x_offset
+                    yoff_out = yoff - yfrac + xc.y_offset + ishft
+                    f.write(f" {x} {xoff_out:6.3f} {y} {yoff_out:6.3f} "
+                            f"{max_corr:6.2f} \n")
+    finally:
+        _POOL_STATE.clear()
 
 
 # ---------------------------------------------------------------- CLI ---

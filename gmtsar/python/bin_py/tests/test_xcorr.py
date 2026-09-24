@@ -812,6 +812,46 @@ class TestXcorrVsCBinaryCSK(unittest.TestCase):
                          f"high-SNR rows (max|Δda|={np.abs(da_diff).max():.4f} px)."))
 
 
+class TestParallelMatchesSerial(unittest.TestCase):
+    """XCORR_PY_PROCS>1 farms the per-location correlation out to workers
+    while the stale fread buffer and the highres md buffer stay serial in
+    the parent. The output must be byte-identical to the serial path,
+    including bands that run past EOF (partial and fully OOB), which is
+    where the stale-row state matters."""
+
+    NX, NY = 1024, 1200
+
+    def _write_pair(self, d: Path, ashift: int) -> None:
+        rng = np.random.default_rng(7)
+        base = rng.normal(0, 800, (self.NY + 40, self.NX + 40, 2))
+        m = base[:self.NY, :self.NX].astype(np.int16)
+        a = base[3:self.NY + 3, 2:self.NX + 2].astype(np.int16)   # known shift
+        m.tofile(d / "m.SLC"); a.tofile(d / "a.SLC")
+        for name, sh in (("m", 0), ("a", ashift)):
+            (d / f"{name}.PRM").write_text(
+                f"SLC_file = {name}.SLC\nnum_rng_bins = {self.NX}\n"
+                f"num_patches = 1\nnum_valid_az = {self.NY}\n"
+                f"rshift = 0\nashift = {sh}\nPRF = 1000.0\n")
+
+    def _run(self, d: Path, procs: int, out: str) -> bytes:
+        env = dict(os.environ, XCORR_PY_PROCS=str(procs))
+        subprocess.run([sys.executable, str(_XCORR), "m.PRM", "a.PRM",
+                        "-xsearch", "32", "-ysearch", "32", "-nx", "4",
+                        "-ny", "8", "-out", out],
+                       cwd=d, env=env, check=True, capture_output=True)
+        return (d / out).read_bytes()
+
+    def test_parallel_byte_identical_incl_oob(self):
+        for ashift in (0, 900):          # 900 pushes the last bands past EOF
+            with self.subTest(ashift=ashift), tempfile.TemporaryDirectory() as t:
+                d = Path(t)
+                self._write_pair(d, ashift)
+                serial = self._run(d, 1, "s.dat")
+                par = self._run(d, 4, "p.dat")
+                self.assertEqual(len(serial.splitlines()), 32)
+                self.assertEqual(serial, par)
+
+
 if __name__ == "__main__":
     # Run with verbose output when invoked directly (no pytest needed).
     unittest.main(verbosity=2)
