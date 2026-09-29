@@ -28,7 +28,7 @@ it (per Rule 13: "ported" and "wired ON by default" are different states
 
 **All dev work lives in `gmtsar/python/`.** Do not modify files outside this directory — everything else is upstream `gmtsar/gmtsar` source and should be left untouched so upstream merges stay clean.
 
-This rule applies to **every consilium-driven artifact** too: audit reports (`AUDIT*.md`), QA notes, release notes, dev rules, and any other fork-only output must be written inside `gmtsar/python/`, never at the repo root. When invoking `/audit`, `/release`, or similar slash commands, override the default destination so output lands at `gmtsar/python/AUDIT.md` (or wherever inside the python tree fits). The "fork = upstream/master + gmtsar/python/" invariant is enforced by `git diff upstream/master..HEAD -- ':!gmtsar/python'` returning empty.
+This rule applies to **every consilium-driven artifact** too: audit reports (`AUDIT*.md`), QA notes, release notes, dev rules, and any other fork-only output must be written inside `gmtsar/python/`, never at the repo root. When invoking `/audit`, `/release`, or similar slash commands, override the default destination so output lands at `gmtsar/python/AUDIT.md` (or wherever inside the python tree fits). The "fork = upstream/master + gmtsar/python/" invariant is enforced by `git diff "$(git merge-base master upstream/master)" master -- ':!gmtsar/python'` returning empty (not `upstream/master..HEAD`, which also lists upstream commits we have not merged yet).
 
 Layout under `gmtsar/python/`:
 - `utils/` — Python CLI tools (`p2p_processing`, `pre_proc`, `geocode`, `intf`, `filter`, …) and libraries (`gmtsar_lib.py`, `snaphu.py`)
@@ -38,6 +38,8 @@ Layout under `gmtsar/python/`:
 - Install script: `install.py` (`--system ubuntu|conda|conda-linux-full|conda-windows-full` installs everything for that system — deps, Python packages, build; `--rebuild` and `--orbits` are optional add-ons). `conda-linux-full` additionally provisions the compiler/build-tool chain via conda (Linux x86_64 only). `conda-windows-full` is native Windows — no WSL, no MSYS2/Cygwin toolchain — still requires Git for Windows for `gmtsar_lib.py`'s POSIX-shell routing. Old bash version archived at `archive/install.sh` (2026-07-13 rewrite — real CLI args instead of shell env vars; see `archive/README.md`).
 
 ## Syncing from upstream
+
+**Frozen workflow: `gmtsar/python/docs/DEV_WORKFLOW.md`** — fork lane (`py/*`) vs upstream lane (`up/*`), sync rules, `c_fixes` bridge, guards. Read it before any commit that touches upstream or opens a PR.
 
 ```bash
 git fetch upstream

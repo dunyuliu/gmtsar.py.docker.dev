@@ -125,9 +125,12 @@ testing the same thing the csh side is — comparisons become noise.
 
 Per CLAUDE.md: all dev in this fork lives under `gmtsar/python/`. Never edit
 upstream `gmtsar/csh/`, `gmtsar/preproc/`, `gmtsar/gmtsar/`, etc. — those are
-upstream-tracked. If an upstream fix is needed, work around it in `python/`
-(e.g. the filter1 → filter_wavelength patch lives in `tests/case_runner.py`,
-not in upstream `pop_config.csh`).
+upstream-tracked. If an upstream fix is needed, contribute it through the
+upstream lane (`up/*` branch from `upstream/master`, PR to `gmtsar/gmtsar`),
+never by committing it to the fork's master; stopgaps go in
+`gmtsar/python/c_fixes/` with an open upstream PR, or as a workaround in
+`python/` (e.g. the filter1 → filter_wavelength patch in
+`tests/case_runner.py`). See `docs/DEV_WORKFLOW.md`.
 
 ## 4. Testing captures performance, hardware, and provenance
 
