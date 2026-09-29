@@ -447,3 +447,23 @@ def test_gcc_major_reads_the_real_compiler():
         import pytest; pytest.skip("no gcc on PATH")
     assert isinstance(install._gcc_major("gcc"), int)
     assert install._gcc_major("definitely-not-a-compiler-xyz") is None
+
+
+def test_fake_lex_rename_is_undone_after_make(tmp_path, monkeypatch):
+    """Rule 0: the .l rename that stops make's implicit .l.c rule must be
+    undone after the build, leaving the tracked file in place and older
+    than its .c so a later manual make won't regenerate the .c either."""
+    import inspect, os
+    src = inspect.getsource(install.do_build)
+    assert "_restore_fake_lex_sources()" in src and "finally:" in src
+    d = tmp_path / "preproc" / "X"
+    d.mkdir(parents=True)
+    (d / "fixer.c").write_text("int main(){return 0;}\n")
+    (d / "fixer.l").write_text(".TH FIXER l\n")
+    monkeypatch.setattr(install, "REPO_ROOT", tmp_path)
+    install._defuse_fake_lex_sources()
+    assert not (d / "fixer.l").exists()
+    install._restore_fake_lex_sources()
+    assert (d / "fixer.l").read_text() == ".TH FIXER l\n"
+    assert not (d / "fixer.l.not-lex-source").exists()
+    assert os.stat(d / "fixer.l").st_mtime < os.stat(d / "fixer.c").st_mtime

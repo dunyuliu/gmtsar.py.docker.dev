@@ -1008,6 +1008,27 @@ def patch_config_mk(config_mk: Path, use_conda: bool,
     config_mk.write_text("".join(lines))
 
 
+def _fake_lex_candidates(suffix: str = ".l"):
+    """Tracked `*.l` files of THIS checkout that sit next to a real `.c`
+    (git ls-files, so nested worktrees such as .claude/worktrees/* and
+    work/ are never touched). Yields the .l path; for suffix
+    ".l.not-lex-source" yields the renamed path instead."""
+    try:
+        out = subprocess.run(["git", "ls-files", "*.l"], cwd=REPO_ROOT,
+                             capture_output=True, text=True, check=True).stdout
+        tracked = [REPO_ROOT / r for r in out.splitlines() if r]
+    except (OSError, subprocess.CalledProcessError):
+        found = list(REPO_ROOT.rglob("*.l")) + [
+            p.with_name(p.name[:-len(".not-lex-source")])
+            for p in REPO_ROOT.rglob("*.l.not-lex-source")]
+        tracked = sorted({p for p in found
+                          if not {"work", ".git", ".claude"} & set(p.relative_to(REPO_ROOT).parts)})
+    for l_file in tracked:
+        if not l_file.with_suffix(".c").is_file():
+            continue
+        yield l_file if suffix == ".l" else l_file.with_name(l_file.name + ".not-lex-source")
+
+
 def _defuse_fake_lex_sources() -> None:
     """Real bug found 2026-07-14: preproc/ERS_preproc/ers_line_fixer/
     ers_line_fixer.l is NOT lex source -- it's a troff man page that
@@ -1039,21 +1060,10 @@ def _defuse_fake_lex_sources() -> None:
     (outside gmtsar/python/, not this project's to patch). Only
     ers_line_fixer.c/.l exist in the whole repo today, but this is
     written generally in case that ever changes."""
-    for l_file in REPO_ROOT.rglob("*.l"):
-        # Real bug (2026-07-14): a substring check ("/work/" in str(l_file))
-        # against the ABSOLUTE path incorrectly matched every file whenever
-        # REPO_ROOT itself happened to be nested under a directory named
-        # "work" -- exactly what test_install.py's own clean-room clones
-        # are (gmtsar/python/work/install_test/clone_.../), silently
-        # skipping the real fix on every test run while a normal user's
-        # clone (no "work" anywhere in its path) would've been unaffected.
-        # Check path COMPONENTS relative to REPO_ROOT instead.
-        rel_parts = l_file.relative_to(REPO_ROOT).parts
-        if "work" in rel_parts or ".git" in rel_parts:
+    for l_file in _fake_lex_candidates():
+        if not l_file.is_file():
             continue
         c_file = l_file.with_suffix(".c")
-        if not c_file.is_file():
-            continue
         renamed = l_file.with_name(l_file.name + ".not-lex-source")
         if renamed.exists():
             continue
@@ -1062,6 +1072,27 @@ def _defuse_fake_lex_sources() -> None:
               f"{renamed.name} (not real lex source -- would spuriously "
               f"trigger Make's implicit .l.c: rule against the real, "
               f"committed {c_file.name}; see _defuse_fake_lex_sources)")
+
+
+def _restore_fake_lex_sources() -> None:
+    """Undo _defuse_fake_lex_sources after make: put each .l back under its
+    tracked name (Rule 0: the upstream tree stays unmodified), then backdate
+    it to one day before its .c so a later manual `make` doesn't fire the
+    .l.c implicit rule either. git ignores mtimes, so this leaves `git
+    status` clean. Also cleans up renames left by earlier installer runs."""
+    for renamed in _fake_lex_candidates(".l.not-lex-source"):
+        if not renamed.is_file():
+            continue
+        l_file = renamed.with_name(renamed.name[:-len(".not-lex-source")])
+        if l_file.exists():
+            continue
+        renamed.rename(l_file)
+        c_file = l_file.with_suffix(".c")
+        if c_file.is_file():
+            t = c_file.stat().st_mtime - 86400
+            os.utime(l_file, (t, t))
+        print(f"==> restored {l_file.relative_to(REPO_ROOT)} "
+              f"(backdated before {c_file.name})")
 
 
 # Real GMTSAR source bug found 2026-07-23 (a genuine --system conda-linux-full
@@ -1156,7 +1187,6 @@ def do_build(use_conda: bool, conda_prefix: Path | None,
     print(f"==> Building gmtsar in {REPO_ROOT} ...")
     os.chdir(REPO_ROOT)
     _apply_c_fixes(windows=False, cc=(extra_env or {}).get("CC", "gcc"))
-    _defuse_fake_lex_sources()
     build_env = None
     if extra_env:
         build_env = dict(os.environ)
@@ -1184,17 +1214,24 @@ def do_build(use_conda: bool, conda_prefix: Path | None,
         run(configure_cmd, env=build_env)
     before = config_mk.read_text()
     patch_config_mk(config_mk, use_conda, conda_prefix)
-    if config_mk.read_text() != before:
-        # Link flags aren't a make prerequisite, so up-to-date binaries
-        # would keep the old RUNPATH. Force a full relink.
-        print("==> config.mk changed (e.g. conda env moved); make clean to relink")
-        run(["make", "clean"], env=build_env)
 
-    # Sequential build: gmtsar's recursive Makefile has cross-dir
-    # dependencies (preproc/* links against ../../gmtsar/libgmtsar) that
-    # race under -j.
-    run(["make"], env=build_env)
-    run(["make", "install"], env=build_env)  # installs into $REPO_ROOT/bin via --prefix (no sudo)
+    # Fake .l files are renamed only while make runs, then restored so the
+    # tracked upstream tree is left untouched (Rule 0).
+    _defuse_fake_lex_sources()
+    try:
+        if config_mk.read_text() != before:
+            # Link flags aren't a make prerequisite, so up-to-date binaries
+            # would keep the old RUNPATH. Force a full relink.
+            print("==> config.mk changed (e.g. conda env moved); make clean to relink")
+            run(["make", "clean"], env=build_env)
+
+        # Sequential build: gmtsar's recursive Makefile has cross-dir
+        # dependencies (preproc/* links against ../../gmtsar/libgmtsar) that
+        # race under -j.
+        run(["make"], env=build_env)
+        run(["make", "install"], env=build_env)  # installs into $REPO_ROOT/bin via --prefix (no sudo)
+    finally:
+        _restore_fake_lex_sources()
 
     bin_dir = REPO_ROOT / "bin"
     py_utils = REPO_ROOT / "gmtsar" / "python" / "utils"
