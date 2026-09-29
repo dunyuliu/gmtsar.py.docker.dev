@@ -3,6 +3,13 @@
 Frozen 2026-09-29. Two kinds of contribution leave this one clone, and they must
 not mix.
 
+**Rule 0 still holds: everything this fork produces lives inside
+`gmtsar/python/`** -- code, docs, reports, scratch, worktrees, build patches.
+Nothing is created or kept outside it. The only work that touches files outside
+it is a lane-A branch (below), which exists on an `up/*` branch and in its own
+worktree under `gmtsar/python/work/`, never on the fork's master and never in
+the main checkout.
+
 ```
             upstream/master (gmtsar/gmtsar)
              |  ^                     ^
@@ -34,7 +41,8 @@ lists upstream's new commits as if they were ours.
 
 1. Branch from upstream, never from the fork:
    `git switch -c up/<topic> upstream/master`
-   (or a separate worktree: `git worktree add ../gmtsar-upstream -b up/<topic> upstream/master`).
+   (or its own worktree, kept inside the python tree -- `work/` is gitignored:
+   `git worktree add gmtsar/python/work/upstream_lane/<topic> -b up/<topic> upstream/master`).
 2. Touch only non-Python files. Exception: a fix that must change a C source and
    its Python port together (e.g. gmtsar/gmtsar#1127).
 3. One commit per PR. Push to the fork, open against upstream:
@@ -72,9 +80,10 @@ never with `-X ours`, which discards upstream contributors' Python edits.
 
 ## Guards
 
-- The installer's `c_fixes` step leaves tracked upstream files modified in the
-  working tree. Never `git add -A` / `git commit -a` on master; stage paths
-  explicitly.
+- The installer's `c_fixes` step currently overwrites tracked upstream files in
+  the main checkout, which breaks Rule 0 in the working tree. Until the installer
+  builds from copies instead, never `git add -A` / `git commit -a` on master;
+  stage paths explicitly.
 - Local hooks protect only this clone. Fork PRs need the invariant check in CI.
 - Stale `worktree-agent-*` branches reached master by squash, so git reports them
   all unmerged. Check each with `git cherry master <branch>` before deleting.
