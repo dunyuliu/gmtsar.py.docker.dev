@@ -861,7 +861,7 @@ def do_windows_build(conda_prefix: Path) -> None:
                       f"'{label}' installed into the '{conda_prefix.name}' "
                       "conda env? (see WINDOWS_CONDA_BOOTSTRAP_PACKAGES)")
 
-    _apply_c_fixes()
+    _apply_c_fixes(windows=True)
     print(f"==> Building gmtsar (CMake/Ninja) in {REPO_ROOT} ...")
     build_dir = REPO_ROOT / "build-win"
     build_dir.mkdir(exist_ok=True)
@@ -1072,10 +1072,10 @@ def _defuse_fake_lex_sources() -> None:
 # implicit function declarations to an error by default, part of C23
 # alignment. NOT --system conda-linux-full-specific: will also break --system
 # ubuntu on any host with GCC 14+ (Ubuntu 24.10+, Fedora 40+, Arch
-# already do). Applying this fix universally, not just under
-# conda-linux-full, since it's a genuine correctness/portability fix with
-# identical behavior on old compilers too (confirmed: compiles clean on
-# both GCC 11.4.0 and 15.2.0). See gmtsar/python/c_fixes/README.md.
+# already do). Applied only where the bug bites (GCC >= 14, or the native
+# Windows build) -- see _c_fix_needed -- so a normal Linux build leaves the
+# tracked upstream file untouched (Rule 0). The patch itself compiles clean
+# on both GCC 11.4.0 and 15.2.0. See gmtsar/python/c_fixes/README.md.
 #
 # Kept as a build-time patch (copied over the real file, not committed
 # there) rather than editing gmtsar/fitoffset.c directly, per this
@@ -1090,9 +1090,51 @@ C_FIXES = {
 }
 
 
-def _apply_c_fixes() -> None:
+def _gcc_major(cc: str) -> int | None:
+    """Major version of the C compiler `cc`, or None if it isn't GCC or
+    can't be queried (clang also answers -dumpversion, so check -v)."""
+    try:
+        v = subprocess.run([cc, "-v"], capture_output=True, text=True)
+        if "gcc version" not in (v.stderr + v.stdout):
+            return None
+        out = subprocess.run([cc, "-dumpversion"], capture_output=True,
+                             text=True, check=True).stdout.strip()
+        return int(out.split(".")[0])
+    except (OSError, ValueError, subprocess.CalledProcessError):
+        return None
+
+
+def _c_fix_needed(name: str, windows: bool, cc: str | None) -> tuple[bool, str]:
+    """Rule 0: overwrite a tracked upstream file only where the bug bites.
+    conv.c: text-mode fopen corrupts binary reads on native Windows only.
+    fitoffset.c: undeclared strlcpy is a hard error on GCC >= 14 only
+    (and on the Windows toolchain, where the build was proven with it)."""
+    if windows:
+        return True, "native Windows build"
+    if name == "fitoffset.c":
+        major = _gcc_major(cc or "gcc")
+        if major is not None and major >= 14:
+            return True, f"GCC {major} >= 14"
+        return False, f"compiler {cc or 'gcc'} is " + (
+            f"GCC {major} < 14" if major is not None else "not GCC")
+    return False, "POSIX build (only needed on Windows)"
+
+
+def _apply_c_fixes(windows: bool = False, cc: str | None = None) -> None:
     for src, dst in C_FIXES.items():
         if not src.is_file():
+            continue
+        needed, why = _c_fix_needed(src.name, windows, cc)
+        if not needed:
+            # A previous run may have overwritten the tracked file; put the
+            # upstream version back so the checkout stays clean (Rule 0).
+            rel = dst.relative_to(REPO_ROOT)
+            if dst.is_file() and dst.read_bytes() == src.read_bytes():
+                subprocess.run(["git", "checkout", "HEAD", "--", str(rel)],
+                               cwd=REPO_ROOT, check=True)
+                print(f"==> restored upstream {rel} (c_fix not needed: {why})")
+            else:
+                print(f"==> skipped c_fixes/{src.name} (not needed: {why})")
             continue
         if dst.is_file() and dst.read_bytes() == src.read_bytes():
             continue
@@ -1102,7 +1144,7 @@ def _apply_c_fixes() -> None:
             continue
         shutil.copyfile(src, dst)
         print(f"==> applied c_fixes: {dst.relative_to(REPO_ROOT)} "
-              f"(from {src.relative_to(REPO_ROOT)})")
+              f"(from {src.relative_to(REPO_ROOT)}; {why})")
 
 
 def do_build(use_conda: bool, conda_prefix: Path | None,
@@ -1113,7 +1155,7 @@ def do_build(use_conda: bool, conda_prefix: Path | None,
     so it can't silently affect any other command this script runs."""
     print(f"==> Building gmtsar in {REPO_ROOT} ...")
     os.chdir(REPO_ROOT)
-    _apply_c_fixes()
+    _apply_c_fixes(windows=False, cc=(extra_env or {}).get("CC", "gcc"))
     _defuse_fake_lex_sources()
     build_env = None
     if extra_env:

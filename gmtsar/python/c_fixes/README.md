@@ -32,9 +32,11 @@ behavior for a fixed short literal into a `MAX_PATH`-sized buffer,
 zero new includes, no BSD-library dependency, compiles cleanly on every
 GCC version tested (11.4.0 and 15.2.0).
 
-Applied automatically at build time by `install.py`'s `_apply_c_fixes()`
-(copies each `C_FIXES` entry over its upstream target before `make`/
-CMake runs) -- not yet contributed upstream to the real
+Applied at build time by `install.py`'s `_apply_c_fixes()` **only where the
+bug bites** (`_c_fix_needed`): `fitoffset.c` when the build compiler is GCC >= 14
+or on native Windows, `conv.c` on native Windows only. Otherwise the tracked
+upstream file is left untouched -- and restored from git if a previous run had
+overwritten it -- so a normal Linux checkout stays clean (Rule 0) -- not yet contributed upstream to the real
 `gmtsar/gmtsar/fitoffset.c`, but no longer inert either.
 
 ## conv.c — binary file reads opened in text mode (Windows)

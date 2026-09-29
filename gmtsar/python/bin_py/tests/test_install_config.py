@@ -423,3 +423,27 @@ def test_patch_config_mk_repoints_stale_ldflags_rpath(tmp_path):
     for keep in ("-s", "-Wl,-rpath,", "-Wl,-z,muldefs"):
         assert keep in ld.split()
     assert ld.count("muldefs") == 1
+
+
+def test_c_fixes_only_where_the_bug_bites(monkeypatch):
+    """Rule 0: c_fixes overwrite tracked upstream files, so they must apply
+    only where needed -- conv.c on native Windows, fitoffset.c on Windows
+    or GCC >= 14 -- and never on a plain Linux build with an older GCC."""
+    need = install._c_fix_needed
+    assert need("conv.c", True, None)[0]
+    assert need("fitoffset.c", True, None)[0]
+    assert not need("conv.c", False, "gcc")[0]
+    monkeypatch.setattr(install, "_gcc_major", lambda cc: 11)
+    assert not need("fitoffset.c", False, "gcc")[0]
+    monkeypatch.setattr(install, "_gcc_major", lambda cc: 15)
+    assert need("fitoffset.c", False, "x86_64-conda-linux-gnu-gcc")[0]
+    monkeypatch.setattr(install, "_gcc_major", lambda cc: None)   # clang etc.
+    assert not need("fitoffset.c", False, "clang")[0]
+
+
+def test_gcc_major_reads_the_real_compiler():
+    import shutil as _sh
+    if not _sh.which("gcc"):
+        import pytest; pytest.skip("no gcc on PATH")
+    assert isinstance(install._gcc_major("gcc"), int)
+    assert install._gcc_major("definitely-not-a-compiler-xyz") is None
