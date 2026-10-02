@@ -1,5 +1,47 @@
 # Pathway forward — what's ported, what's not, and why
 
+## Active 2026-09-29: sync upstream, ship Indio, clean up
+
+Order set by the user. Clean room throughout: fresh clone + fresh conda env +
+fresh runs; only the cached dataset tarballs are reused. Oracle = the frozen
+C references (see below), not today's rebuilt C, because upstream C changed.
+
+- [x] Sync upstream: 6 commits (C warning fixes, 35 files; none in
+      `gmtsar/python/` or `sbas*`) merged as `5ab8956`; C rebuilt.
+- [x] Freeze the C references: `work/csh_test/<case>/` for the 21 full-tier
+      cases (produced 2026-07-13 by the pre-sync C) made read-only; the 161
+      compared files (9.35 GB) hashed to `tests/frozen_csh_test.sha256`
+      (verify: `cd work/csh_test && sha256sum -c ../../tests/frozen_csh_test.sha256`).
+- [x] Frozen into `tests/reference/` (161 files, read-only, hashes verified);
+      `test_install.py` now seeds it into clean-room clones like the dataset
+      cache, so every case also runs csh-vs-frozen and py-vs-frozen.
+- [ ] Clean-room `test_install.py --system conda --full`: unit tests + 21-case
+      sweep, all three comparison pairs.
+- [x] Indio `sbas` on the post-sync build (isolated trial, fresh extraction):
+      py vs C 31/31 grids SUCCESS (vel, rms, dem_err, 28 disp; worst rms
+      1.92e-06, threshold 1e-2). C vs the frozen 2026-08-03 C run: 23/31
+      identical in value, 8 differ by <= 1.19e-07 (one float32 ULP; rebuilt
+      env's LAPACK/BLAS -- sbas.c unchanged by the sync).
+      Found and fixed on the way: the installed dispatcher could not import
+      the port (abspath vs the bin/ symlink) and its C fallback re-exec'd
+      itself (17 h hang) because staging utils/sbas deleted the C `sbas`;
+      the installer now keeps a shadowed C binary as bin/sbas_c.
+- [x] `ALOS_Indio_SBAS` in the full tier (21 -> 22): csh side runs the bundled
+      runSBAS.csh with GMTSAR_SBAS_PY=0; compare.py uses per-case SBAS output
+      lists; shipped solver outputs removed after extraction (false-pass
+      guard). Remaining: the clean-room 22-case run.
+- [ ] PR the Python side to upstream (lane B, `docs/DEV_WORKFLOW.md`), from a
+      freshly synced master.
+- [ ] Clear the stale agent worktrees: 75 under `.claude/worktrees/`, each
+      checked with `git cherry` before removal.
+- [ ] Test the outside contribution gmtsar/gmtsar#1127 (orbit dt truncation).
+
+**Backlog from this session:** `SAT_baseline_py` stale vs upstream #1123
+(measured <0.1 mm on Pinon; needs an alpha~90 case); 9 csh mirrors from the
+Sept upstream sync (NSR_S, `psconvert baseline.ps`, `rm unwrap.cmd`,
+`select_pairs`); port-provenance manifest; `xcorr_py` SNR 1/1000 rows off by
+one print LSB vs C.
+
 ## In progress 2026-08-04: `sbas` time-series solver ported to Python
 
 `bin_py/sbas_py/sbas_ref.py`. Oracle = the C binary on the ALOS Indio SBAS set.
