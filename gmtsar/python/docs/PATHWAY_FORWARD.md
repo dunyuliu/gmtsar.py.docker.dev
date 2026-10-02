@@ -32,8 +32,12 @@ C references (see below), not today's rebuilt C, because upstream C changed.
       guard). Remaining: the clean-room 22-case run.
 - [ ] PR the Python side to upstream (lane B, `docs/DEV_WORKFLOW.md`), from a
       freshly synced master.
-- [ ] Clear the stale agent worktrees: 75 under `.claude/worktrees/`, each
-      checked with `git cherry` before removal.
+- [x] Cleared the 75 stale agent worktrees (11 GB) and their 75 branches
+      (2026-10-02). 50 held uncommitted work, so a per-branch merged check
+      could not decide; everything was archived first, read-only, in
+      `work/agent_worktrees_archive_2026-10-02/`: `agent_branches.bundle`
+      (verified; restore with `git fetch <bundle> 'refs/heads/*:refs/heads/*'`),
+      `uncommitted/<worktree>.patch` (50), `worktree_branch_map.tsv`.
 - [ ] Test the outside contribution gmtsar/gmtsar#1127 (orbit dt truncation).
 
 **Backlog from this session:** `SAT_baseline_py` stale vs upstream #1123
