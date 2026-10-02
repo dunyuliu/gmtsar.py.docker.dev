@@ -10,7 +10,7 @@ import xarray as xr
 from skimage import io
 from skimage.metrics import structural_similarity as ssim
 import matplotlib.pyplot as plt
-from cases import caseNameList, rawDir, SLCDir, \
+from cases import fileNameList, files_for_case, caseNameList, rawDir, SLCDir, \
     pythonRunRoot, cshRefRoot, referenceRoot, workAbsoluteDir
 
 # --case NAME [NAME2 ...]: compare only these cases instead of every case in
@@ -30,20 +30,14 @@ if "--case" in sys.argv:
                   f"see cases.py CASES for the valid list")
     caseNameList = _requested
 
-fileNameList = ['corr_ll.png','display_amp_ll.png','phasefilt_mask_ll.png',
-        'corr_ll.grd', 'phasefilt.grd', 'filtcorr.grd',
-        # los_ll.grd: only built when threshold_snaphu>0 + threshold_geocode>0
-        # (currently ALOS_haiti). Previously omitted, so the geocode-stage
-        # `$wavel` literal-shell-var bug never surfaced. Now included so that
-        # any LOS-stage regression is caught.
-        'los_ll.grd']
-
 # Optional files: produced by some recipes and not others, depending on whether
 # threshold flags enable the LOS / geocode-2 path. When one side has the file
 # and the other doesn't, treat as recipe-divergence (skipped) rather than FAIL.
 # A real regression on these is caught via the py-vs-frozen pair when frozen
 # reference exists.
 OPTIONAL_FILES = {'los_ll.grd'}
+
+
 pyRoot    = pythonRunRoot.rstrip(os.sep)   # today's python outputs
 cshRoot   = cshRefRoot.rstrip(os.sep)      # today's csh outputs
 frozenRoot = referenceRoot.rstrip(os.sep)  # frozen reference (committed in tree)
@@ -276,7 +270,7 @@ def discover_intf_dirs(case):
         case_root = f'{root}/{case}'
         if not os.path.isdir(case_root):
             continue
-        for fname in fileNameList:
+        for fname in files_for_case(case, (pyRoot, cshRoot, frozenRoot)):
             for path in glob.glob(f'{case_root}/**/{fname}', recursive=True):
                 rel = os.path.dirname(os.path.relpath(path, case_root))
                 dirs.add(rel)
@@ -402,7 +396,7 @@ for caseName in caseNameList:
     # fields and no warnings.
     case_results.update(_read_git_sidecar(caseName))
     intf_dirs = discover_intf_dirs(caseName)
-    for fileName in fileNameList:
+    for fileName in files_for_case(caseName, (pyRoot, cshRoot, frozenRoot)):
         ftype = 'png' if fileName.endswith('.png') else 'grd'
         for intf in intf_dirs:
             py     = _file_under(pyRoot,     caseName, intf, fileName)

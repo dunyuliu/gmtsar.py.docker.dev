@@ -173,6 +173,28 @@ def _reuse_tarball_cache(clone_python_dir: Path, cases: list[str]) -> None:
          f"{len(cases)} case(s) from {src} -> {dst}")
 
 
+def _reuse_frozen_reference(clone_python_dir: Path, cases: list[str]) -> None:
+    """Rule 14, same logic as the tarball cache: the frozen C references in
+    tests/reference/ (gitignored, filled by tests/freeze_reference.py) are
+    immutable reference data, so copy them into the fresh clone. Without
+    them compare.py only runs python-vs-csh against the clone's freshly
+    built C, and a change in upstream C behaviour (py and csh both drifting
+    together) goes unseen. With them it also runs csh-vs-frozen and
+    python-vs-frozen. copy2 keeps the read-only mode bits."""
+    src = _PYTHON_DIR / "tests" / "reference"
+    present = [c for c in cases if (src / c).is_dir()] if src.is_dir() else []
+    if not present:
+        _log(f"[{_utc_now()}] no frozen reference at {src} -- compare.py "
+             "will run python-vs-csh only")
+        return
+    dst = clone_python_dir / "tests" / "reference"
+    for case in present:
+        if not (dst / case).exists():
+            shutil.copytree(src / case, dst / case, copy_function=shutil.copy2)
+    _log(f"[{_utc_now()}] reused frozen reference for {len(present)}/"
+         f"{len(cases)} case(s) from {src} -> {dst}")
+
+
 def _check_sweep_results(clone_python_dir: Path, expected_cases: list[str]) -> tuple[bool, str]:
     """sweep.py's own exit code only reflects whether the ORCHESTRATION
     crashed -- it returns 0 even when individual case comparisons FAIL
@@ -329,6 +351,7 @@ def main() -> int:
         # (--smoke never touches either -- no point reusing anything).
         needed_cases = args.cases or _tier_cases(sweep_tier)
         _reuse_tarball_cache(clone_python_dir, needed_cases)
+        _reuse_frozen_reference(clone_python_dir, needed_cases)
         _reuse_orbits(clone_dir)
 
     install_cmd = ["python3", str(clone_python_dir / "install.py"),

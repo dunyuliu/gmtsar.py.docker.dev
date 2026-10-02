@@ -5,6 +5,7 @@ The single source of truth for every test case is `CASES` below — a dict of
 dicts keyed by case name. All consumers (runner.py, compare.py, sweep.sh,
 freeze_reference.py) derive what they need from it.
 """
+import glob
 import os
 
 # ---------------------------------------------------------------- workdir ---
@@ -123,7 +124,7 @@ CASES = {
 
     # ---- multi-pair stacks (Phase 4 SBAS / time-series testing) ----
     'ALOS_Hawaii_stack':        {'satellite': 'ALOS',       'ext': 'tar.gz', 'tiers': {'sbas'},                'enabled': True},
-    'ALOS_Indio_SBAS':          {'satellite': 'ALOS',       'ext': 'tar.gz', 'tiers': {'sbas'},                'enabled': True},
+    'ALOS_Indio_SBAS':          {'satellite': 'ALOS',       'ext': 'tar.gz', 'tiers': {'sbas', 'full'},        'enabled': True},  # sbas solver only (ships unwrapped intfs); csh side runs runSBAS.csh with GMTSAR_SBAS_PY=0
     'ENVI_2907_stack':          {'satellite': 'ENVI',       'ext': 'tar.gz', 'tiers': {'sbas'},                'enabled': True},
     'S1A_Stack_CPGF_T173':      {'satellite': 'S1_TOPS',    'ext': 'tar.gz', 'tiers': {'sbas'},                'enabled': True},
     'kilauea_timeseries_sentinel_data':  {'satellite': 'S1_TOPS', 'ext': 'tar.gz', 'tiers': {'sbas'},          'enabled': True},
@@ -149,3 +150,31 @@ if os.environ.get('TEST_CASES'):
 else:
     caseNameList = [name for name, info in CASES.items()
                     if info['enabled'] and _tier in info['tiers']]
+
+
+# Comparison-target files (used by compare.py and freeze_reference.py; kept
+# here, not in compare.py, because compare.py runs its comparison loop at
+# import time).
+fileNameList = ['corr_ll.png','display_amp_ll.png','phasefilt_mask_ll.png',
+        'corr_ll.grd', 'phasefilt.grd', 'filtcorr.grd',
+        # los_ll.grd: only built when threshold_snaphu>0 + threshold_geocode>0
+        # (currently ALOS_haiti). Previously omitted, so the geocode-stage
+        # `$wavel` literal-shell-var bug never surfaced. Now included so that
+        # any LOS-stage regression is caught.
+        'los_ll.grd']
+
+# SBAS cases are not interferogram runs: `sbas` writes velocity, RMS, DEM-error
+# and one displacement grid per scene. Their compared files replace
+# fileNameList; disp_*.grd names are discovered from whichever tree has them.
+SBAS_CASES = {'ALOS_Indio_SBAS'}
+SBAS_FIXED_FILES = ['vel.grd', 'rms.grd', 'dem_err.grd']
+
+
+def files_for_case(case, roots=None):
+    """Comparison-target basenames for `case`."""
+    if case not in SBAS_CASES:
+        return fileNameList
+    names = set()
+    for root in (roots or ()):
+        names.update(os.path.basename(p) for p in glob.glob(f'{root}/{case}/disp_*.grd'))
+    return SBAS_FIXED_FILES + sorted(names)

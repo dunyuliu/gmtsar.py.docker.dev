@@ -12,7 +12,7 @@ corr_ll.grd). Skips files that already exist in reference/ unless --force.
 """
 import argparse, glob, os, shutil
 from cases import caseNameList, cshRefRoot
-from compare import fileNameList
+from cases import fileNameList, files_for_case
 
 REF_DIR  = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'reference')
 CSH_ROOT = cshRefRoot.rstrip(os.sep)
@@ -26,7 +26,7 @@ def discover_intf_dirs(case):
     if not os.path.isdir(case_root):
         return []
     dirs = set()
-    for fname in fileNameList:
+    for fname in files_for_case(case, (CSH_ROOT,)):
         for p in glob.glob(f'{case_root}/**/{fname}', recursive=True):
             dirs.add(os.path.dirname(os.path.relpath(p, case_root)))
     return sorted(dirs)
@@ -42,7 +42,7 @@ def main():
     copied = skipped = missing = 0
     for case in cases:
         for intf in discover_intf_dirs(case):
-            for fname in fileNameList:
+            for fname in files_for_case(case, (CSH_ROOT,)):
                 src = os.path.join(CSH_ROOT, case, intf, fname)
                 dst = os.path.join(REF_DIR, case, intf, fname)
                 if not os.path.isfile(src):

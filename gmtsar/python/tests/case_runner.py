@@ -212,6 +212,24 @@ def _check_config_drift(case: str, bundled_cfg: str, staged_config: str) -> None
         sys.exit(3)
 
 
+# Cases whose bundled README.txt is prose, not a runnable recipe: run this
+# bundled csh script instead. ALOS_Indio_SBAS ships runSBAS.csh (the C `sbas`
+# run plus plots) next to a descriptive README.txt.
+CSH_ENTRY = {"ALOS_Indio_SBAS": "runSBAS.csh"}
+
+
+def _remove_shipped_sbas_outputs(tree_dir: str) -> None:
+    """SBAS tarballs ship the maintainers' own solver outputs (vel.grd,
+    rms.grd, ...). Left in place, a run that fails to write them would still
+    leave a file to compare, and compare.py would report a false pass
+    (project_rules.md #1). Remove them right after extraction."""
+    from cases import SBAS_FIXED_FILES
+    for pat in SBAS_FIXED_FILES + ["disp_*.grd"]:
+        for f in glob.glob(os.path.join(tree_dir, pat)) + \
+                 glob.glob(os.path.join(tree_dir, "._" + pat)):
+            os.remove(f)
+
+
 def _pick_csh_readme(csh_dir: str) -> str:
     """Some tarballs (e.g. S1_Larsen_C) ship README_Frame.txt /
     README_proc.txt instead of a plain README.txt. Pick the most likely
@@ -324,14 +342,25 @@ def run_case(case: str, csh_dir: str, py_dir: str, tarball: str, py_readme: str,
     # Extract tarball into each tree if the tree's intf/ isn't there yet.
     # (Don't search the whole tree for .grd: bundled tarballs include
     # topo/dem.grd, which would falsely look like a finished run.)
-    if not os.path.isdir(os.path.join(csh_dir, "intf")):
+    # SBAS cases have no intf/ (a flat tree of cut_*.grd + intf.tab), so
+    # intf.tab also marks an already-extracted tree; without it every sweep
+    # would re-extract over a finished oracle.
+    from cases import SBAS_CASES
+    def _extracted(d: str) -> bool:
+        return os.path.isdir(os.path.join(d, "intf")) or \
+               os.path.isfile(os.path.join(d, "intf.tab"))
+    if not _extracted(csh_dir):
         os.makedirs(csh_dir, exist_ok=True)
         with tarfile.open(tarball) as tf:
             tf.extractall(csh_dir)
+        if case in SBAS_CASES:
+            _remove_shipped_sbas_outputs(csh_dir)
     os.makedirs(py_dir, exist_ok=True)
-    if not os.path.isdir(os.path.join(py_dir, "intf")):
+    if not _extracted(py_dir):
         with tarfile.open(tarball) as tf:
             tf.extractall(py_dir)
+        if case in SBAS_CASES:
+            _remove_shipped_sbas_outputs(py_dir)
 
     _fix_filter_wavelength(csh_dir)
     _fix_filter_wavelength(py_dir)
@@ -362,11 +391,14 @@ def run_case(case: str, csh_dir: str, py_dir: str, tarball: str, py_readme: str,
         if oracle_valid:
             return
         print(f"[{case}] no csh reference — running legacy csh recipe")
-        readme = _pick_csh_readme(csh_dir)
-        subprocess.run(["cleanup", "all"], cwd=csh_dir, env=env)
+        readme = CSH_ENTRY.get(case) or _pick_csh_readme(csh_dir)
+        # The csh slot is the C oracle: `sbas` on PATH is the Python
+        # dispatcher (utils/sbas), so force its C fallback here.
+        csh_env = dict(env, GMTSAR_SBAS_PY="0")
+        subprocess.run(["cleanup", "all"], cwd=csh_dir, env=csh_env)
         log_path = os.path.join(csh_dir, "log.txt")
         with open(log_path, "w") as logf:
-            subprocess.run(["csh", readme], cwd=csh_dir, env=env, stdout=logf, stderr=subprocess.STDOUT)
+            subprocess.run(["csh", readme], cwd=csh_dir, env=csh_env, stdout=logf, stderr=subprocess.STDOUT)
         wall = int(time.time() - t0)
         _append_time_log(time_log, f"{case} csh used {wall} s")
         with open(oracle_sentinel, "w") as f:
