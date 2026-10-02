@@ -191,6 +191,10 @@ def _reuse_frozen_reference(clone_python_dir: Path, cases: list[str]) -> None:
     for case in present:
         if not (dst / case).exists():
             shutil.copytree(src / case, dst / case, copy_function=shutil.copy2)
+            # Files stay read-only (copy2 keeps the mode); directories must be
+            # writable, or the disposable clone could never be deleted.
+            for d in [dst / case, *(p for p in (dst / case).rglob("*") if p.is_dir())]:
+                d.chmod(d.stat().st_mode | 0o700)
     _log(f"[{_utc_now()}] reused frozen reference for {len(present)}/"
          f"{len(cases)} case(s) from {src} -> {dst}")
 
