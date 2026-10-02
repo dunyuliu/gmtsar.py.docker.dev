@@ -490,6 +490,17 @@ def stage_execs(paths: list[Path], bin_dir: Path) -> None:
             continue
         f.chmod(f.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
         dst = bin_dir / f.name
+        if not dst.is_symlink() and dst.is_file() and \
+                dst.read_bytes()[:4] == b"\x7fELF":
+            # A Python dispatcher named like a compiled C program (e.g.
+            # utils/sbas vs the C `sbas` from make install). Deleting the C
+            # binary leaves the dispatcher's C fallback nothing to run but
+            # itself; keep it as <name>_c instead.
+            keep = bin_dir / f"{f.name}_c"
+            if keep.exists() or keep.is_symlink():
+                keep.unlink()
+            dst.rename(keep)
+            print(f"==> kept C {f.name} as {keep.name} (shadowed by utils/{f.name})")
         if dst.is_symlink() or dst.is_file():
             dst.unlink()
         elif dst.is_dir():

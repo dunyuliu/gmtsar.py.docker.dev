@@ -24,7 +24,7 @@ import os
 import shutil
 import sys
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.realpath(__file__))   # resolve the bin/ symlink
 SBAS_PY = os.path.join(HERE, "..", "bin_py", "sbas_py", "sbas_ref.py")
 
 
@@ -39,11 +39,33 @@ def _n_atm(argv):
     return 0
 
 
+def _find_c_binary():
+    """The compiled C `sbas`, never this dispatcher. This script is installed
+    as bin/sbas, which shadows the C binary of the same name, so the installer
+    keeps the C one as bin/sbas_c. Falls back to any other `sbas` on PATH,
+    then the in-place build tree (gmtsar/gmtsar/sbas)."""
+    me = os.path.realpath(__file__)
+    found = shutil.which("sbas_c")
+    if found:
+        return found
+    for d in os.environ.get("PATH", "").split(os.pathsep):
+        cand = os.path.join(d, "sbas")
+        if os.access(cand, os.X_OK) and os.path.realpath(cand) != me:
+            return cand
+    build = os.path.realpath(os.path.join(HERE, "..", "..", "sbas"))
+    if os.access(build, os.X_OK) and build != me:
+        return build
+    return None
+
+
 def _exec_c(argv):
-    """Hand off to the C binary, or fail loudly if it is not on PATH (Rule 1)."""
-    if shutil.which("sbas") is None:
-        sys.exit("sbas: the C `sbas` binary is not on PATH and is required here")
-    os.execvp("sbas", ["sbas"] + argv)
+    """Hand off to the C binary, or fail loudly if there is none (Rule 1)."""
+    c = _find_c_binary()
+    if c is None:
+        sys.exit("sbas: the C `sbas` binary was not found (looked for sbas_c "
+                 "on PATH, another sbas on PATH, and the build tree) and is "
+                 "required here")
+    os.execv(c, [c] + argv)
 
 
 def main():

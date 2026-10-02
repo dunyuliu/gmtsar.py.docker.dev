@@ -467,3 +467,18 @@ def test_fake_lex_rename_is_undone_after_make(tmp_path, monkeypatch):
     assert (d / "fixer.l").read_text() == ".TH FIXER l\n"
     assert not (d / "fixer.l.not-lex-source").exists()
     assert os.stat(d / "fixer.l").st_mtime < os.stat(d / "fixer.c").st_mtime
+
+
+def test_stage_execs_keeps_a_shadowed_c_binary(tmp_path):
+    """Real bug: utils/sbas staged over bin/sbas deleted the C `sbas` that
+    make install had put there, leaving the dispatcher's C fallback nothing
+    to run but itself. A compiled binary must survive as <name>_c."""
+    src_dir = tmp_path / "utils"; src_dir.mkdir()
+    util = src_dir / "sbas"; util.write_text("#!/usr/bin/env python3\n")
+    bin_dir = tmp_path / "bin"; bin_dir.mkdir()
+    (bin_dir / "sbas").write_bytes(b"\x7fELF fake compiled sbas")
+    install.stage_execs([util], bin_dir)
+    assert (bin_dir / "sbas_c").read_bytes().startswith(b"\x7fELF")
+    assert (bin_dir / "sbas").is_symlink()
+    install.stage_execs([util], bin_dir)            # re-run is idempotent
+    assert (bin_dir / "sbas_c").read_bytes().startswith(b"\x7fELF")

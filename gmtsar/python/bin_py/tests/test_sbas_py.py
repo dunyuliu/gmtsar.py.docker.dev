@@ -149,5 +149,49 @@ def test_dispatcher_atm_1_stays_in_python():
     assert ns["_n_atm"](["a"]) == 0
 
 
+def _installed_layout(tmp_path, with_c=True):
+    """bin/sbas -> utils/sbas symlink, as install.py stages it, plus a fake C
+    binary kept as bin/sbas_c (which install.py now preserves)."""
+    b = tmp_path / "bin"
+    b.mkdir()
+    (b / "sbas").symlink_to(_UTILS / "sbas")
+    if with_c:
+        fake = b / "sbas_c"
+        fake.write_text("#!/bin/sh\necho FAKE_C_SBAS \"$@\"\n")
+        fake.chmod(0o755)
+    return b
+
+
+def test_dispatcher_via_bin_symlink_imports_the_port(tmp_path):
+    """Real bug: HERE used abspath, which does not resolve the bin/ symlink,
+    so the installed dispatcher could not import sbas_ref."""
+    b = _installed_layout(tmp_path)
+    r = subprocess.run([sys.executable, str(b / "sbas"), "nope.tab", "nope.tab",
+                        "1", "2", "3", "4"], capture_output=True, text=True,
+                       cwd=tmp_path, env={**os.environ, "PATH": f"{b}:/usr/bin:/bin"})
+    assert "No module named" not in r.stderr, r.stderr
+
+
+def test_dispatcher_c_fallback_runs_the_c_not_itself(tmp_path):
+    """Real bug: the C fallback exec'd `sbas` from PATH, which was the
+    dispatcher itself, and spun forever (a 17 h sweep hang)."""
+    b = _installed_layout(tmp_path)
+    r = subprocess.run([sys.executable, str(b / "sbas"), "x", "y", "1", "2", "3", "4"],
+                       capture_output=True, text=True, timeout=30,
+                       env={**os.environ, "GMTSAR_SBAS_PY": "0",
+                            "PATH": f"{b}:/usr/bin:/bin"})
+    assert "FAKE_C_SBAS x y 1 2 3 4" in r.stdout
+
+
+def test_dispatcher_c_fallback_fails_loudly_when_only_itself_on_path(tmp_path, monkeypatch):
+    b = _installed_layout(tmp_path, with_c=False)
+    src = (_UTILS / "sbas").read_text().split("if __name__")[0]
+    ns: dict = {"__file__": str(b / "sbas")}
+    exec(compile(src, "sbas", "exec"), ns)
+    monkeypatch.setenv("PATH", f"{b}:/usr/bin:/bin")
+    ns["HERE"] = str(tmp_path / "no_build_tree" / "utils")
+    assert ns["_find_c_binary"]() is None
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))
