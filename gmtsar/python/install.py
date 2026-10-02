@@ -1211,6 +1211,9 @@ def do_build(use_conda: bool, conda_prefix: Path | None,
         run(["autoconf"])
     run_soft(["autoupdate"])  # best-effort, matches `autoupdate || true`
     config_mk = REPO_ROOT / "config.mk"
+    # A config.mk that predates this run may carry stale link flags (a moved
+    # conda env); a freshly configured one cannot, and nothing is built yet.
+    config_preexisting = config_mk.is_file()
     if not config_mk.is_file():
         configure_cmd = ["./configure", f"--prefix={REPO_ROOT}",
                           f"--with-orbits-dir={REPO_ROOT}/orbits"]
@@ -1230,9 +1233,14 @@ def do_build(use_conda: bool, conda_prefix: Path | None,
     # tracked upstream tree is left untouched (Rule 0).
     _defuse_fake_lex_sources()
     try:
-        if config_mk.read_text() != before:
+        if config_preexisting and config_mk.read_text() != before:
             # Link flags aren't a make prerequisite, so up-to-date binaries
-            # would keep the old RUNPATH. Force a full relink.
+            # would keep the old RUNPATH. Force a full relink. Never on a
+            # fresh configure: upstream preproc/TSX_preproc/Makefile's clean
+            # loop is `for d in lib src; do (cd $d; make clean); done`, and in
+            # a fresh clone lib/ does not exist yet, so the failed cd re-runs
+            # make clean in the same dir -- unbounded recursion (a clean-room
+            # install hung 9 h at make depth 11764).
             print("==> config.mk changed (e.g. conda env moved); make clean to relink")
             run(["make", "clean"], env=build_env)
 

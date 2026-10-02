@@ -482,3 +482,15 @@ def test_stage_execs_keeps_a_shadowed_c_binary(tmp_path):
     assert (bin_dir / "sbas").is_symlink()
     install.stage_execs([util], bin_dir)            # re-run is idempotent
     assert (bin_dir / "sbas_c").read_bytes().startswith(b"\x7fELF")
+
+
+def test_make_clean_only_for_a_preexisting_config_mk():
+    """Real bug: the relink-on-changed-config.mk `make clean` also fired on a
+    FRESH configure (patch_config_mk always edits a new config.mk), where
+    upstream TSX_preproc's clean loop recurses forever because lib/ does not
+    exist yet. It must be gated on config.mk having existed before the run."""
+    import inspect
+    src = inspect.getsource(install.do_build)
+    assert "config_preexisting = config_mk.is_file()" in src
+    assert "if config_preexisting and config_mk.read_text() != before:" in src
+    assert src.index("config_preexisting = config_mk.is_file()") < src.index("run(configure_cmd")
