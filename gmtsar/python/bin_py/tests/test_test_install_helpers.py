@@ -234,7 +234,7 @@ def test_tier_cases_matches_cases_py_for_fast_and_full():
     # The full tier must be a strict superset of fast -- if it isn't,
     # something in cases.py's tier tagging has drifted.
     assert set(ti._tier_cases("fast")) <= set(ti._tier_cases("full"))
-    assert len(ti._tier_cases("full")) == 21
+    assert len(ti._tier_cases("full")) == 22   # 21 interferogram cases + ALOS_Indio_SBAS (2026-10-02)
     assert len(ti._tier_cases("fast")) == 12
 
 
