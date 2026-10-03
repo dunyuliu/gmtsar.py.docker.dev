@@ -40,6 +40,18 @@ C references (see below), not today's rebuilt C, because upstream C changed.
       `uncommitted/<worktree>.patch` (50), `worktree_branch_map.tsv`.
 - [ ] Test the outside contribution gmtsar/gmtsar#1127 (orbit dt truncation).
 
+**Upstream defects found by this run (not ours; reporting/fixing upstream is
+the user's call -- lane A):**
+- `make_slc_csk2.c` (CSG preprocessor), upstream `252b6df` ("fixing existing
+  warnings in all the preprocessors", 2026-09-21): `write_slc_hdf5` changed
+  `short *buf, *tmp` to `float *buf, *tmp`, but `H5Dread` still reads the
+  dataset's native int16. Every output SLC is now all zeros (correct size, no
+  error). Caught by `test_make_slc_csk2_parity` (3 tests): the Python port,
+  faithful to the pre-sync C, is the correct one. No sweep case uses CSG.
+- `preproc/TSX_preproc/Makefile` clean loop `for d in lib src; do (cd $d;
+  make clean); done` recurses without bound when `lib/` is missing (fresh
+  clone). Worked around in install.py (`555dcb8`).
+
 **Backlog from this session:** `SAT_baseline_py` stale vs upstream #1123
 (measured <0.1 mm on Pinon; needs an alpha~90 case); 9 csh mirrors from the
 Sept upstream sync (NSR_S, `psconvert baseline.ps`, `rm unwrap.cmd`,
